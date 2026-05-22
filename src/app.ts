@@ -6,10 +6,9 @@ import swaggerSpec from './swagger';
 
 const app = express();
 
-// Middlewares
-app.use(cors());
-app.use(express.json()); // Analisará os payloads JSON
 
+app.use(cors());
+app.use(express.json());
 // Documentação Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

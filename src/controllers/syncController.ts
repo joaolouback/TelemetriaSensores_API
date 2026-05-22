@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../database/db';
 
-// Endpoint para sincronização em massa vinda do app offline-first
 export const syncData = async (req: Request, res: Response): Promise<any> => {
   try {
     console.log(`\n[${new Date().toISOString()}] Recebendo requisição POST /sync`);
@@ -14,9 +13,7 @@ export const syncData = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ error: 'O payload deve ser um array não vazio de logs.' });
     }
 
-    // Tratativa aprofundada dos dados para evitar inserções sujas, nulas, ou de tipos incorretos no MySQL
     const values = logs.map((log: any) => {
-      // Helper para garantir conversão numérica real ou NULL, e formatação/arredondamento via toFixed
       const parseReal = (value: any, decimals: number = 6) => {
         if (value === null || value === undefined || value === '') return null;
         const parsed = parseFloat(value);
@@ -26,19 +23,17 @@ export const syncData = async (req: Request, res: Response): Promise<any> => {
 
       return [
         log.sensor_type ? String(log.sensor_type).trim() : 'UNKNOWN',
-        parseReal(log.latitude, 8),      // GPS precisa de precisão alta (8 casas = ~1mm)
+        parseReal(log.latitude, 8),
         parseReal(log.longitude, 8),
-        parseReal(log.accel_x, 4),       // Aceleração com 4 casas é suficiente
+        parseReal(log.accel_x, 4),
         parseReal(log.accel_y, 4),
         parseReal(log.accel_z, 4),
         parseReal(log.magnitude, 4),
-        parseReal(log.battery_level, 2), // Bateria com 2 casas exatas (ex: 0.56, ou 0.90)
+        parseReal(log.battery_level, 2),
         log.network_type ? String(log.network_type).trim() : 'UNKNOWN',
-        // Normalização do bit de flag (sqlite pode mandar booleanos, string '1', ou number)
-        String(log.synced) === '1' || log.synced === true ? 1 : 0,
-        // Normalização de data para formato legível TEXT (ISO 8601) universal
-        log.created_at && !isNaN(new Date(log.created_at).getTime()) 
-          ? new Date(log.created_at).toISOString() 
+        1, // Força 1 (Confirmado) ao chegar no backend
+        log.created_at && !isNaN(new Date(log.created_at).getTime())
+          ? new Date(log.created_at).toISOString()
           : new Date().toISOString()
       ];
     });
@@ -49,7 +44,6 @@ export const syncData = async (req: Request, res: Response): Promise<any> => {
       VALUES ?
     `;
 
-    // mysql2 suporta bulk insert passando um array de arrays aninhado em outro array
     const [result] = await pool.query(query, [values]);
 
     return res.status(200).json({
@@ -62,7 +56,6 @@ export const syncData = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-// Endpoint opcional para consulta paginada
 export const getLogs = async (req: Request, res: Response): Promise<any> => {
   try {
     console.log(`\n[${new Date().toISOString()}] 🔍 Recebendo requisição GET /logs`);
