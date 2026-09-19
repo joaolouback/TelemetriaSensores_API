@@ -4,9 +4,10 @@ const options: swaggerJSDoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Sensor Telemetry API',
-      version: '1.0.0',
-      description: 'API REST Node.js para receber dados de telemetria offline-first',
+      title: 'UVV Go API',
+      version: '2.0.0',
+      description:
+        'API REST do projeto UVV Go — pontos de interesse do campus, geofencing e telemetria de sensores (offline-first). Node.js + Express + Prisma + PostgreSQL.',
     },
     servers: [
       {

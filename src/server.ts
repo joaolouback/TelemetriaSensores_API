@@ -2,7 +2,7 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import app from './app';
 import dotenv from 'dotenv';
-import pool from './database/db';
+import prisma from './database/prisma';
 import { setupWebSocket } from './controllers/wsHandler';
 
 dotenv.config();
@@ -12,9 +12,8 @@ const PORT = process.env.PORT || 3000;
 const startServer = async () => {
   try {
     // Validando a conexão com o banco antes de escutar a porta
-    const connection = await pool.getConnection();
-    console.log('-> Conectado ao banco de dados MySQL com sucesso!');
-    connection.release();
+    await prisma.$connect();
+    console.log('-> Conectado ao banco de dados PostgreSQL (Prisma) com sucesso!');
 
     // Cria servidor HTTP a partir do app Express
     const server = http.createServer(app);

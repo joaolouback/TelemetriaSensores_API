@@ -1,18 +1,25 @@
 {
-  "name": "sensor-telemetry-api",
+  "name": "uvvgo-api",
   "version": "1.0.0",
-  "description": "API REST Node.js para receber dados de telemetria",
+  "description": "API REST do projeto UVV Go — pontos de interesse, geofencing e telemetria de sensores",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "dev": "tsx src/server.ts",
-    "build": "tsc"
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc",
+    "db:up": "docker compose up -d",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "7.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "mysql2": "^3.9.7",
+    "pg": "^8.23.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "ws": "^8.21.0"
@@ -21,9 +28,11 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.7",
+    "@types/pg": "^8.23.1",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/ws": "^8.18.1",
+    "prisma": "7.10.0",
     "tsx": "^4.8.2",
     "typescript": "^5.4.5"
   }
