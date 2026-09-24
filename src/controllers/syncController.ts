@@ -45,8 +45,14 @@ export const getLogs = async (req: Request, res: Response): Promise<any> => {
       prisma.telemetriaSensor.count()
     ]);
 
+    // Converter BigInt para Number/String para permitir serialização JSON
+    const formattedData = data.map((item) => ({
+      ...item,
+      id: Number(item.id)
+    }));
+
     return res.status(200).json({
-      data,
+      data: formattedData,
       pagination: {
         total,
         page,

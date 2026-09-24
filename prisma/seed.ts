@@ -2,11 +2,6 @@
  * Seed do banco UVV Go.
  *
  * Os 10 pontos de coleta definidos na metodologia do TCC (seção 3.1.1.2).
- *
- * ATENÇÃO: as coordenadas abaixo são APROXIMADAS, posicionadas dentro do
- * campus da UVV apenas para o mapa funcionar em desenvolvimento.
- * Substitua pelos valores reais coletados em campo antes dos testes de
- * precisão geográfica. Depois de editar, rode novamente: npm run seed
  */
 import prisma from '../src/database/prisma';
 
@@ -118,8 +113,19 @@ async function main() {
   console.log('Semeando banco UVV Go...');
   console.log(`Centro do campus: ${CAMPUS_UVV.latitude}, ${CAMPUS_UVV.longitude}`);
 
+  // Criar Usuário inicial
+  const usuario = await prisma.usuario.upsert({
+    where: { email: 'estudante@uvv.br' },
+    update: {},
+    create: {
+      nome: 'Estudante UVV',
+      email: 'estudante@uvv.br',
+      pontuacaoTotal: 0,
+    },
+  });
+  console.log(`  + usuário demo criado/existente (id: ${usuario.id})`);
+
   for (const ponto of PONTOS) {
-    // Idempotente: atualiza se já existir um ponto com o mesmo nome.
     const existente = await prisma.pontoDeInteresse.findFirst({
       where: { nome: ponto.nome },
     });

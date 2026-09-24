@@ -1,9 +1,8 @@
 /**
- * Utilitário compartilhado para parsing de logs de telemetria.
- * Reutilizado pelo syncController (REST) e wsHandler (WebSocket).
+ * Utilitário para parsing de logs de telemetria vindo do aplicativo mobile.
+ * Utilizado por syncController (REST) e wsHandler (WebSocket).
  *
- * Converte o payload cru vindo do app (snake_case, valores possivelmente
- * string/NaN) em objetos no formato do model TelemetriaSensor do Prisma.
+ * Mapeia os dados recebidos (snake_case / camelCase) para a tabela `telemetria_sensor` do Prisma.
  */
 import { Prisma } from '@prisma/client';
 
@@ -14,31 +13,41 @@ const parseReal = (value: any, decimals: number = 6): number | null => {
   return Number(parsed.toFixed(decimals));
 };
 
+const parseBateria = (value: any): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) return null;
+  // Se for valor entre 0 e 1 (ex: 0.85 do expo-battery), converte para porcentagem 0-100
+  if (parsed <= 1.0 && parsed >= 0.0) {
+    return Math.round(parsed * 100);
+  }
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+};
+
 const parseData = (value: any): Date => {
   if (value && !isNaN(new Date(value).getTime())) return new Date(value);
   return new Date();
 };
 
 /**
- * Converte um array de logs brutos em objetos prontos para
- * `prisma.telemetriaSensor.createMany`.
+ * Converte um array de logs brutos em objetos no formato do model TelemetriaSensor (tabela `telemetria_sensor`).
  */
 export const parseLogs = (logs: any[]): Prisma.TelemetriaSensorCreateManyInput[] => {
   return logs.map((log: any) => ({
-    sensorType: log.sensor_type ? String(log.sensor_type).trim() : 'UNKNOWN',
-    latitude: parseReal(log.latitude, 8),
-    longitude: parseReal(log.longitude, 8),
-    accelX: parseReal(log.accel_x, 4),
-    accelY: parseReal(log.accel_y, 4),
-    accelZ: parseReal(log.accel_z, 4),
+    latitude: parseReal(log.latitude, 8) ?? 0.0,
+    longitude: parseReal(log.longitude, 8) ?? 0.0,
+    acelerometroX: parseReal(log.accel_x ?? log.acelerometro_x ?? log.acelerometroX, 4),
+    acelerometroY: parseReal(log.accel_y ?? log.acelerometro_y ?? log.acelerometroY, 4),
+    acelerometroZ: parseReal(log.accel_z ?? log.acelerometro_z ?? log.acelerometroZ, 4),
     magnitude: parseReal(log.magnitude, 4),
-    batteryLevel: parseReal(log.battery_level, 2),
-    networkType: log.network_type ? String(log.network_type).trim() : 'UNKNOWN',
-    synced: true, // Força synced = true ao chegar no backend
-    createdAt: parseData(log.created_at),
+    nivelBateria: parseBateria(log.battery_level ?? log.batteryLevel ?? log.nivel_bateria ?? log.nivelBateria),
+    tipoRede: log.network_type ?? log.networkType ?? log.tipo_rede ?? log.tipoRede
+      ? String(log.network_type ?? log.networkType ?? log.tipo_rede ?? log.tipoRede).trim().toUpperCase()
+      : 'UNKNOWN',
+    timestamp: parseData(log.created_at ?? log.timestamp),
     usuarioId:
-      log.usuario_id !== undefined && log.usuario_id !== null
-        ? Number(log.usuario_id)
+      log.usuario_id ?? log.usuarioId !== undefined && (log.usuario_id ?? log.usuarioId) !== null
+        ? Number(log.usuario_id ?? log.usuarioId)
         : null,
   }));
 };

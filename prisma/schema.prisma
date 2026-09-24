@@ -10,143 +10,123 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Perfil do usuário. No diagrama, Administrador herda de Usuario;
-/// aqui a distinção é feita pelo campo `role` (herança de tabela única).
-enum Role {
-  ESTUDANTE
-  ADMINISTRADOR
-}
-
 model Usuario {
   id             Int      @id @default(autoincrement())
-  nome           String   @db.VarChar(120)
-  email          String   @unique @db.VarChar(160)
-  senhaHash      String   @map("senha_hash") @db.VarChar(255)
-  role           Role     @default(ESTUDANTE)
+  nome           String   @db.VarChar(150)
+  email          String   @unique @db.VarChar(255)
+  senhaHash      String?  @map("senha_hash") @db.VarChar(255)
   pontuacaoTotal Int      @default(0) @map("pontuacao_total")
   dataCadastro   DateTime @default(now()) @map("data_cadastro")
 
-  interacoes  Interacao[]
-  conquistas  UsuarioConquista[]
-  ranking     Ranking?
-  telemetrias TelemetriaSensor[]
+  administrador Administrador?
+  interacoes    Interacao[]
+  conquistas    UsuarioConquista[]
+  ranking       Ranking?
+  telemetrias   TelemetriaSensor[]
 
-  @@map("usuarios")
+  @@map("usuario")
 }
 
-/// Ponto de coleta no campus (Prédio Azul, Biblioteca, Capela...).
-/// `raioGeofence` em metros define a cerca virtual de validação.
+model Administrador {
+  id      Int     @id
+  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("administrador")
+}
+
+model Conquista {
+  id                Int      @id @default(autoincrement())
+  titulo            String   @db.VarChar(150)
+  descricao         String?  @db.Text
+  iconeUrl          String?  @map("icone_url") @db.VarChar(500)
+  pontosNecessarios Int      @default(0) @map("pontos_necessarios")
+
+  usuarios UsuarioConquista[]
+
+  @@map("conquista")
+}
+
+model UsuarioConquista {
+  usuarioId       Int      @map("usuario_id")
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conquistaId     Int      @map("conquista_id")
+  conquista       Conquista @relation(fields: [conquistaId], references: [id], onDelete: Cascade)
+  dataDesbloqueio DateTime @default(now()) @map("data_desbloqueio")
+
+  @@id([usuarioId, conquistaId])
+  @@index([conquistaId], map: "idx_uc_conquista")
+  @@map("usuario_conquista")
+}
+
+model Ranking {
+  usuarioId    Int      @id @map("usuario_id")
+  posicao      Int
+  pontuacao    Int      @default(0)
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em")
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([posicao], map: "idx_ranking_posicao")
+  @@map("ranking")
+}
+
+model TelemetriaSensor {
+  id            BigInt   @id @default(autoincrement())
+  usuarioId     Int?     @map("usuario_id")
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  latitude      Float
+  longitude     Float
+  acelerometroX Float?   @map("acelerometro_x")
+  acelerometroY Float?   @map("acelerometro_y")
+  acelerometroZ Float?   @map("acelerometro_z")
+  magnitude     Float?
+  nivelBateria  Int?     @map("nivel_bateria") @db.SmallInt
+  tipoRede      String?  @map("tipo_rede") @db.VarChar(30)
+  timestamp     DateTime @default(now()) @map("timestamp")
+
+  @@index([usuarioId, timestamp(sort: Desc)], map: "idx_telemetria_usuario_ts")
+  @@map("telemetria_sensor")
+}
+
 model PontoDeInteresse {
   id               Int      @id @default(autoincrement())
-  nome             String   @db.VarChar(120)
+  nome             String   @db.VarChar(150)
   descricao        String?  @db.Text
   latitude         Float
   longitude        Float
   raioGeofence     Float    @default(30) @map("raio_geofence")
-  pontosRecompensa Int      @default(10) @map("pontos_recompensa")
+  pontosRecompensa Int      @default(0) @map("pontos_recompensa")
   ativo            Boolean  @default(true)
-  criadoEm         DateTime @default(now()) @map("criado_em")
 
   objeto3d   Objeto3D?
   interacoes Interacao[]
 
-  @@map("pontos_interesse")
+  @@map("ponto_de_interesse")
 }
 
-/// Modelo 3D renderizado via ARCore ao alcançar o ponto.
 model Objeto3D {
-  id       Int    @id @default(autoincrement())
-  nome     String @db.VarChar(120)
-  assetUrl String @map("asset_url") @db.VarChar(500)
-  formato  String @default("glb") @db.VarChar(20)
-  escala   Float  @default(1)
+  id                 Int              @id @default(autoincrement())
+  pontoDeInteresseId Int              @unique @map("ponto_de_interesse_id")
+  ponto              PontoDeInteresse @relation(fields: [pontoDeInteresseId], references: [id], onDelete: Cascade)
+  nome               String           @db.VarChar(150)
+  assetUrl           String           @map("asset_url") @db.VarChar(500)
+  formato            String?          @db.VarChar(20)
+  escala             Float            @default(1.0)
 
-  pontoId Int              @unique @map("ponto_id")
-  ponto   PontoDeInteresse @relation(fields: [pontoId], references: [id], onDelete: Cascade)
-
-  @@map("objetos_3d")
+  @@map("objeto_3d")
 }
 
-/// Registro de um usuário alcançando um ponto de coleta.
-/// `validadoGeofence` guarda se o backend confirmou a proximidade.
 model Interacao {
-  id                Int      @id @default(autoincrement())
-  dataHora          DateTime @default(now()) @map("data_hora")
-  latitudeRegistro  Float    @map("latitude_registro")
-  longitudeRegistro Float    @map("longitude_registro")
-  distanciaMetros   Float?   @map("distancia_metros")
-  validadoGeofence  Boolean  @default(false) @map("validado_geofence")
-  pontosGanhos      Int      @default(0) @map("pontos_ganhos")
+  id                 BigInt           @id @default(autoincrement())
+  usuarioId          Int              @map("usuario_id")
+  usuario            Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  pontoDeInteresseId Int              @map("ponto_de_interesse_id")
+  ponto              PontoDeInteresse @relation(fields: [pontoDeInteresseId], references: [id], onDelete: Cascade)
+  dataHora           DateTime         @default(now()) @map("data_hora")
+  latitudeRegistro   Float            @map("latitude_registro")
+  longitudeRegistro  Float            @map("longitude_registro")
+  validadoGeofence   Boolean          @default(false) @map("validado_geofence")
 
-  usuarioId Int              @map("usuario_id")
-  usuario   Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  pontoId   Int              @map("ponto_id")
-  ponto     PontoDeInteresse @relation(fields: [pontoId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId])
-  @@index([pontoId])
-  @@map("interacoes")
-}
-
-/// Medalha/conquista desbloqueável.
-model Conquista {
-  id                Int    @id @default(autoincrement())
-  titulo            String @db.VarChar(120)
-  descricao         String @db.Text
-  iconeUrl          String? @map("icone_url") @db.VarChar(500)
-  pontosNecessarios Int    @default(0) @map("pontos_necessarios")
-
-  usuarios UsuarioConquista[]
-
-  @@map("conquistas")
-}
-
-/// Tabela de junção: qual usuário desbloqueou qual conquista e quando.
-model UsuarioConquista {
-  usuarioId     Int      @map("usuario_id")
-  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  conquistaId   Int      @map("conquista_id")
-  conquista     Conquista @relation(fields: [conquistaId], references: [id], onDelete: Cascade)
-  desbloqueadaEm DateTime @default(now()) @map("desbloqueada_em")
-
-  @@id([usuarioId, conquistaId])
-  @@map("usuarios_conquistas")
-}
-
-/// Classificação do usuário. Uma linha por usuário (0..1 no diagrama).
-model Ranking {
-  id           Int      @id @default(autoincrement())
-  posicao      Int
-  pontuacao    Int      @default(0)
-  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em")
-
-  usuarioId Int     @unique @map("usuario_id")
-  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@map("rankings")
-}
-
-/// Telemetria de sensores herdada da POC (GPS, acelerômetro, bateria, rede).
-/// Substitui a tabela `sensor_logs` do MySQL. `usuarioId` é opcional para
-/// manter compatibilidade com coletas anônimas do app atual.
-model TelemetriaSensor {
-  id           Int      @id @default(autoincrement())
-  sensorType   String   @default("UNKNOWN") @map("sensor_type") @db.VarChar(50)
-  latitude     Float?
-  longitude    Float?
-  accelX       Float?   @map("accel_x")
-  accelY       Float?   @map("accel_y")
-  accelZ       Float?   @map("accel_z")
-  magnitude    Float?
-  batteryLevel Float?   @map("battery_level")
-  networkType  String?  @map("network_type") @db.VarChar(50)
-  synced       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  usuarioId Int?     @map("usuario_id")
-  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-
-  @@index([createdAt])
-  @@index([usuarioId])
-  @@map("telemetria_sensores")
+  @@index([usuarioId, dataHora(sort: Desc)], map: "idx_interacao_usuario")
+  @@index([pontoDeInteresseId], map: "idx_interacao_ponto")
+  @@map("interacao")
 }
