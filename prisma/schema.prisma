@@ -1,0 +1,132 @@
+// Schema do projeto UVV Go
+// Modelado a partir do diagrama de classes do TCC.
+// Banco: PostgreSQL | ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id             Int      @id @default(autoincrement())
+  nome           String   @db.VarChar(150)
+  email          String   @unique @db.VarChar(255)
+  senhaHash      String?  @map("senha_hash") @db.VarChar(255)
+  pontuacaoTotal Int      @default(0) @map("pontuacao_total")
+  dataCadastro   DateTime @default(now()) @map("data_cadastro")
+
+  administrador Administrador?
+  interacoes    Interacao[]
+  conquistas    UsuarioConquista[]
+  ranking       Ranking?
+  telemetrias   TelemetriaSensor[]
+
+  @@map("usuario")
+}
+
+model Administrador {
+  id      Int     @id
+  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("administrador")
+}
+
+model Conquista {
+  id                Int      @id @default(autoincrement())
+  titulo            String   @db.VarChar(150)
+  descricao         String?  @db.Text
+  iconeUrl          String?  @map("icone_url") @db.VarChar(500)
+  pontosNecessarios Int      @default(0) @map("pontos_necessarios")
+
+  usuarios UsuarioConquista[]
+
+  @@map("conquista")
+}
+
+model UsuarioConquista {
+  usuarioId       Int      @map("usuario_id")
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conquistaId     Int      @map("conquista_id")
+  conquista       Conquista @relation(fields: [conquistaId], references: [id], onDelete: Cascade)
+  dataDesbloqueio DateTime @default(now()) @map("data_desbloqueio")
+
+  @@id([usuarioId, conquistaId])
+  @@index([conquistaId], map: "idx_uc_conquista")
+  @@map("usuario_conquista")
+}
+
+model Ranking {
+  usuarioId    Int      @id @map("usuario_id")
+  posicao      Int
+  pontuacao    Int      @default(0)
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em")
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([posicao], map: "idx_ranking_posicao")
+  @@map("ranking")
+}
+
+model TelemetriaSensor {
+  id            BigInt   @id @default(autoincrement())
+  usuarioId     Int?     @map("usuario_id")
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  latitude      Float
+  longitude     Float
+  acelerometroX Float?   @map("acelerometro_x")
+  acelerometroY Float?   @map("acelerometro_y")
+  acelerometroZ Float?   @map("acelerometro_z")
+  magnitude     Float?
+  nivelBateria  Int?     @map("nivel_bateria") @db.SmallInt
+  tipoRede      String?  @map("tipo_rede") @db.VarChar(30)
+  timestamp     DateTime @default(now()) @map("timestamp")
+
+  @@index([usuarioId, timestamp(sort: Desc)], map: "idx_telemetria_usuario_ts")
+  @@map("telemetria_sensor")
+}
+
+model PontoDeInteresse {
+  id               Int      @id @default(autoincrement())
+  nome             String   @db.VarChar(150)
+  descricao        String?  @db.Text
+  latitude         Float
+  longitude        Float
+  raioGeofence     Float    @default(30) @map("raio_geofence")
+  pontosRecompensa Int      @default(0) @map("pontos_recompensa")
+  ativo            Boolean  @default(true)
+
+  objeto3d   Objeto3D?
+  interacoes Interacao[]
+
+  @@map("ponto_de_interesse")
+}
+
+model Objeto3D {
+  id                 Int              @id @default(autoincrement())
+  pontoDeInteresseId Int              @unique @map("ponto_de_interesse_id")
+  ponto              PontoDeInteresse @relation(fields: [pontoDeInteresseId], references: [id], onDelete: Cascade)
+  nome               String           @db.VarChar(150)
+  assetUrl           String           @map("asset_url") @db.VarChar(500)
+  formato            String?          @db.VarChar(20)
+  escala             Float            @default(1.0)
+
+  @@map("objeto_3d")
+}
+
+model Interacao {
+  id                 BigInt           @id @default(autoincrement())
+  usuarioId          Int              @map("usuario_id")
+  usuario            Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  pontoDeInteresseId Int              @map("ponto_de_interesse_id")
+  ponto              PontoDeInteresse @relation(fields: [pontoDeInteresseId], references: [id], onDelete: Cascade)
+  dataHora           DateTime         @default(now()) @map("data_hora")
+  latitudeRegistro   Float            @map("latitude_registro")
+  longitudeRegistro  Float            @map("longitude_registro")
+  validadoGeofence   Boolean          @default(false) @map("validado_geofence")
+
+  @@index([usuarioId, dataHora(sort: Desc)], map: "idx_interacao_usuario")
+  @@index([pontoDeInteresseId], map: "idx_interacao_ponto")
+  @@map("interacao")
+}

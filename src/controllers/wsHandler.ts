@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import pool from '../database/db';
+import prisma from '../database/prisma';
 import { parseLogs } from '../utils/parseLogs';
 
 interface SyncMessage {
@@ -43,16 +43,10 @@ export const setupWebSocket = (wss: WebSocket.Server): void => {
 
         console.log(`[WS] Recebido sync requestId=${requestId} com ${data.logs.length} logs`);
 
-        const values = parseLogs(data.logs);
+        const registros = parseLogs(data.logs);
 
-        const query = `
-          INSERT INTO sensor_logs 
-          (sensor_type, latitude, longitude, accel_x, accel_y, accel_z, magnitude, battery_level, network_type, synced, created_at) 
-          VALUES ?
-        `;
-
-        const [result] = await pool.query(query, [values]);
-        const count = (result as any).affectedRows;
+        const result = await prisma.telemetriaSensor.createMany({ data: registros });
+        const count = result.count;
 
         console.log(`[WS] Inseridos ${count} logs para requestId=${requestId}`);
 
