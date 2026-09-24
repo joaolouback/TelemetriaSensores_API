@@ -1,11 +1,14 @@
 import WebSocket from 'ws';
 import prisma from '../database/prisma';
 import { parseLogs } from '../utils/parseLogs';
+import { verificarToken } from '../utils/auth';
 
 interface SyncMessage {
   type: 'sync';
   requestId: string;
   logs: any[];
+  /** JWT opcional: associa os registros ao usuário autenticado. */
+  token?: string;
 }
 
 /**
@@ -43,7 +46,7 @@ export const setupWebSocket = (wss: WebSocket.Server): void => {
 
         console.log(`[WS] Recebido sync requestId=${requestId} com ${data.logs.length} logs`);
 
-        const registros = parseLogs(data.logs);
+        const registros = parseLogs(data.logs, verificarToken(data.token));
 
         const result = await prisma.telemetriaSensor.createMany({ data: registros });
         const count = result.count;

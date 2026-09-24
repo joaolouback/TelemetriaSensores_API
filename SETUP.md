@@ -54,6 +54,10 @@ cp .env.example .env
 
 Não precisa editar nada — os valores padrão já funcionam.
 
+> **Já tinha um `.env` de antes?** Acrescente a linha `JWT_SECRET=...` (veja o
+> `.env.example`). Sem ela a API não inicia, porque é usada para assinar os
+> tokens de login.
+
 ### 2.3 Subir o banco de dados
 
 Com o Docker Desktop **aberto**:

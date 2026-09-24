@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../utils/auth';
 import prisma from '../database/prisma';
 import { parseLogs } from '../utils/parseLogs';
 
-export const syncData = async (req: Request, res: Response): Promise<any> => {
+export const syncData = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     console.log(`\n[${new Date().toISOString()}] Recebendo requisição POST /sync`);
 
@@ -12,7 +13,7 @@ export const syncData = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ error: 'O payload deve ser um array não vazio de logs.' });
     }
 
-    const data = parseLogs(logs);
+    const data = parseLogs(logs, req.usuarioId ?? null);
 
     const result = await prisma.telemetriaSensor.createMany({ data });
 

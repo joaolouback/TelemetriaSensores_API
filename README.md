@@ -38,6 +38,7 @@ sensores herdada da Prova de Conceito (offline-first).
    ```env
    PORT=3000
    DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uvvgo?schema=public"
+   JWT_SECRET="troque-este-segredo"
    ```
 
 4. **Crie as tabelas e popule os pontos do campus**
@@ -110,20 +111,32 @@ posição informada e cada ponto, indicando quais estão dentro do raio de geofe
 
 **`GET /api/pontos/:id`** — detalha um ponto, incluindo o objeto 3D associado.
 
+### Autenticação
+
+**`POST /api/auth/registro`** — cria a conta. Corpo: `{ "nome", "email", "senha" }` (senha ≥ 6).
+**`POST /api/auth/login`** — corpo: `{ "email", "senha" }`.
+
+Ambos respondem `{ "token": "<JWT>", "usuario": { "id", "nome", "email", ... } }`.
+O token vale 30 dias e vai no header `Authorization: Bearer <token>`.
+
+**`GET /api/auth/me`** — dados do usuário do token.
+
 ### Telemetria
 
 **`POST /api/sync`** — sincronização em lote dos logs guardados offline no SQLite.
+As colunas seguem a classe `TelemetriaSensor` do diagrama. Se o header
+`Authorization` for enviado, os registros são associados ao usuário do token.
 ```http
 POST http://localhost:3000/api/sync
 Content-Type: application/json
+Authorization: Bearer <token>
 
 [
   {
-    "sensor_type": "combined",
     "latitude": -20.34105, "longitude": -40.2923,
-    "accel_x": 0.1, "accel_y": 0.2, "accel_z": 9.8, "magnitude": 9.81,
-    "battery_level": 0.85, "network_type": "wifi",
-    "created_at": "2026-09-19T12:00:00Z"
+    "acelerometro_x": 0.1, "acelerometro_y": 0.2, "acelerometro_z": 9.8,
+    "magnitude": 9.81, "nivel_bateria": 85, "tipo_rede": "wifi",
+    "timestamp": "2026-09-19T12:00:00Z"
   }
 ]
 ```
@@ -135,7 +148,7 @@ Resposta: `{ "message": "Sincronização realizada com sucesso", "insertedCount"
 
 Envio:
 ```json
-{ "type": "sync", "requestId": "abc123", "logs": [ /* ...mesmo formato do POST */ ] }
+{ "type": "sync", "requestId": "abc123", "token": "<JWT opcional>", "logs": [ /* ...mesmo formato do POST */ ] }
 ```
 Resposta:
 ```json
@@ -146,5 +159,8 @@ Resposta:
 
 - O `POST /api/sync` aceita o payload em `snake_case` (formato do app) e converte
   para o schema do Prisma. Valores inválidos (`NaN`, datas quebradas) são saneados.
-- O campo `usuarioId` em `TelemetriaSensor` é opcional, mantendo compatibilidade
-  com as coletas anônimas do app atual.
+  Os nomes antigos do app (`accel_x`, `battery_level`, `network_type`, `created_at`)
+  continuam aceitos, para aparelhos que ainda não atualizaram.
+- O campo `usuarioId` em `TelemetriaSensor` é opcional: o app coleta desde a
+  abertura, antes do login. Com token, o usuário do token prevalece sobre
+  qualquer `usuario_id` enviado no corpo.
