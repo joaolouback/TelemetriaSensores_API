@@ -1,0 +1,10 @@
+# Quebra de linha LF em todos os arquivos de texto, em qualquer sistema operacional
+# (evita os avisos "LF will be replaced by CRLF" e diffs só de quebra de linha).
+* text=auto eol=lf
+
+# Binários: nunca converter
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.glb binary
+*.ttf binary

@@ -1,0 +1,2 @@
+Fotos dos locais exibidas no card do app (referenciadas por `imagemUrl` no seed).
+Use JPG ou PNG de até ~300 KB, na proporção 16:9.

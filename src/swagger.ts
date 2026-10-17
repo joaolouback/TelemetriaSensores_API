@@ -15,8 +15,16 @@ const options: swaggerJSDoc.Options = {
         description: 'Servidor Local',
       },
     ],
+    // Botão "Authorize": cole o token do login/registro para testar as rotas protegidas.
+    // Nas rotas públicas o token é simplesmente ignorado.
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
-  apis: ['./src/routes/*.ts', './src/controllers/*.ts'],
+  apis: ['./src/modules/**/*.routes.ts', './src/app.ts'],
 };
 
 const swaggerSpec = swaggerJSDoc(options);
