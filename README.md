@@ -88,6 +88,7 @@ src/
 │   ├── conquista/     desbloqueio de conquistas pela pontuação
 │   ├── ponto/         pontos de interesse, objetos 3D e cálculo de proximidade
 │   ├── interacao/     check-in (coleta em AR)
+│   ├── desafio/       desafio 1x1 (convite por código, corrida pelos pontos sorteados)
 │   └── telemetria/    /sync, /logs e o WebSocket /ws
 ├── shared/
 │   ├── database/      Prisma Client (singleton) e o tipo DbClient para transações
@@ -123,12 +124,13 @@ Implementa o diagrama de classes do TCC (`prisma/schema.prisma`):
 | Model | Papel |
 | --- | --- |
 | `Usuario` / `Administrador` | Estudantes; os administradores têm também um registro em `Administrador` |
-| `PontoDeInteresse` | Os pontos de coleta do campus, com raio de geofence |
+| `PontoDeInteresse` | Os pontos de coleta do campus, com raio de geofence, curiosidade e foto do card |
 | `Objeto3D` | Modelo 3D renderizado via ARCore ao alcançar o ponto |
 | `Interacao` | Registro de um usuário alcançando um ponto |
 | `Conquista` / `UsuarioConquista` | Medalhas e o que cada usuário desbloqueou |
 | `Ranking` | Classificação por pontuação |
 | `TelemetriaSensor` | Telemetria de sensores da POC (substitui `sensor_logs`) |
+| `Desafio` / `DesafioPonto` / `DesafioColeta` | Desafio 1x1: os jogadores, os pontos sorteados e quem coletou cada um (não estão no diagrama original — acrescentar) |
 
 ## Endpoints
 
@@ -196,8 +198,10 @@ distância do aparelho) e registra uma `Interacao`:
 
 ```json
 { "pontosGanhos": 10, "pontuacaoTotal": 25, "distanciaMetros": 4.2,
-  "novasConquistas": [ { "id": 1, "titulo": "Primeiros Passos", ... } ], "interacao": { ... } }
+  "novasConquistas": [ { "id": 1, "titulo": "Primeiros Passos", ... } ], "interacao": { ... },
+  "desafio": { "desafioId": 3, "coletados": 2, "total": 3, "finalizado": false, "resultado": null, "bonus": 0 } }
 ```
+`desafio` só vem preenchido quando o ponto faz parte do desafio 1x1 em andamento (veja abaixo).
 
 **`GET /api/interacoes/minhas`** — `{ "pontosColetados": [1, 4], "pontuacaoTotal": 25 }`.
 O app usa para não oferecer a câmera em pontos já coletados.
@@ -206,6 +210,37 @@ O app usa para não oferecer a câmera em pontos já coletados.
 `Objeto3D` pode ser relativo (`/modelos/cristal.glb`, completado pelo app com o endereço
 da API) ou uma URL absoluta. Para usar um modelo próprio, coloque o `.glb` na pasta e
 ajuste `OBJETO_3D_PADRAO` (ou cada ponto) em `prisma/seed.ts`.
+
+**Card do local:** depois da coleta, o app mostra a `descricao`, a `curiosidade` e a foto
+(`imagemUrl`) do ponto, que vêm em `GET /api/pontos`. As fotos ficam em `public/imagens/`
+(servidas em `/imagens/*`). Preencha `curiosidade` e `imagemUrl` em `prisma/seed.ts` com
+conteúdo verificado e rode `npm run db:seed`.
+
+### Desafio 1x1
+
+Um jogador cria o desafio e manda o **código de 6 caracteres** para o amigo. Quando o amigo
+entra, começa uma **corrida de 1 hora** pelos **3 pontos sorteados**: quem coletar todos
+primeiro vence e ganha **+20 pontos**. Se o tempo acabar, vence quem coletou mais (ou empate).
+Cada jogador participa de um desafio por vez. Todas as rotas exigem token.
+
+| Rota | O que faz |
+| --- | --- |
+| `POST /api/desafios` | Cria (status `AGUARDANDO`), sorteia os pontos e devolve o `codigo`. O convite vale 30 min |
+| `POST /api/desafios/entrar` | Corpo `{ "codigo": "K7Q2MX" }`. Começa a partida (`EM_ANDAMENTO`, `terminaEm` = +1 h) |
+| `GET /api/desafios/atual` | `{ desafio }`: o ativo ou o que terminou há menos de 30 min (para ver o resultado) |
+| `POST /api/desafios/:id/sair` | Antes de começar, cancela; durante, é desistência — o oponente vence |
+| `GET /api/desafios/historico` | Últimos 20 desafios e o placar de vitórias, derrotas e empates |
+
+- **Coleta no desafio:** o check-in normal (`POST /api/interacoes`) conta para o desafio quando o
+  ponto é um dos sorteados — **mesmo que já tenha sido coletado antes** no jogo normal (nesse
+  caso rende 0 pontos normais, só o progresso no desafio).
+- **Sem tarefa agendada:** convites e partidas vencidos são encerrados na próxima consulta.
+  O desafio devolve `agora` (hora do servidor) para o cronômetro do app não depender do
+  relógio do celular.
+- **Concorrência:** toda mudança de estado trava a linha do desafio — se os dois completam ao
+  mesmo tempo, ou entram com o mesmo código, só um resultado vale.
+- **Testar sozinho:** use o Swagger como segundo jogador — crie uma conta, faça login,
+  clique em *Authorize* e use `POST /api/desafios/entrar` com o código mostrado no app.
 
 ### Telemetria
 

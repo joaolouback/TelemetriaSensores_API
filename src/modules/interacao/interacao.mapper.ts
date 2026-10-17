@@ -15,9 +15,10 @@ export const toInteracaoDto = (interacao: Interacao): InteracaoDto => ({
 });
 
 export const toResultadoCheckinDto = (resultado: ResultadoCheckin): ResultadoCheckinDto => ({
-  interacao: toInteracaoDto(resultado.interacao),
+  interacao: resultado.interacao ? toInteracaoDto(resultado.interacao) : null,
   distanciaMetros: resultado.distanciaMetros,
-  pontosGanhos: resultado.ponto.pontosRecompensa,
+  pontosGanhos: resultado.pontosGanhos,
   pontuacaoTotal: resultado.usuario.pontuacaoTotal,
   novasConquistas: resultado.novasConquistas.map(toConquistaDto),
+  desafio: resultado.desafio,
 });

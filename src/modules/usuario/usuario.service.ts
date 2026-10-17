@@ -8,9 +8,12 @@ import { Usuario } from './entities/usuario.entity';
 export const buscarPorEmail = (email: string): Promise<Usuario | null> =>
   prisma.usuario.findUnique({ where: { email } });
 
-/** Lança 404 se o usuário não existir (ex.: conta apagada com token ainda válido). */
-export async function obterPorId(id: number): Promise<Usuario> {
-  const usuario = await prisma.usuario.findUnique({ where: { id } });
+/**
+ * Lança 404 se o usuário não existir (ex.: conta apagada com token ainda válido).
+ * Dentro de uma transação, passe o `tx` para ler o estado ainda não confirmado.
+ */
+export async function obterPorId(id: number, db: DbClient = prisma): Promise<Usuario> {
+  const usuario = await db.usuario.findUnique({ where: { id } });
   if (!usuario) throw new AppError(404, 'Usuário não encontrado.');
   return usuario;
 }

@@ -87,6 +87,9 @@ npm run db:seed
 O seed cadastra os **10 pontos de coleta do campus** e as conquistas.
 Ao final você verá `Pronto. 10 pontos de interesse no banco.`
 
+> **Atualizou o projeto (`git pull`)?** Rode `npm run db:migrate` e `npm run db:seed` de novo:
+> versões novas podem trazer tabelas novas (ex.: as do desafio 1x1). Nenhum dado é apagado.
+
 ### 2.5 Iniciar a API
 
 ```bash
@@ -226,6 +229,20 @@ Toque em **Usar GPS** para voltar à posição real.
 A posição simulada também é a enviada no check-in, então os pontos são creditados de
 verdade no banco. Para recomeçar, use outra conta ou `npm run db:reset && npm run db:seed`.
 O modo não existe no build de produção.
+
+### Desafio 1x1
+
+1. Na tela **Início**, toque em **Criar desafio** e compartilhe o código de 6 letras
+2. No celular do amigo: **Tenho um código** → digite o código → **Entrar**. A partida de
+   1 hora começa para os dois
+3. No **Mapa**, os 3 pontos sorteados aparecem em **laranja** (⚔️) e o placar fica no topo
+4. Coletar um ponto do desafio conta mesmo que você já o tenha coletado antes
+5. Quem coletar os 3 primeiro vence e ganha **+20 pontos**; o resultado aparece no card da Início
+
+**Testando com um celular só:** o segundo jogador pode ser o Swagger
+(`http://localhost:3000/api-docs`): registre outra conta em `POST /api/auth/registro`, clique em
+**Authorize** com o token e use `POST /api/desafios/entrar` com o código do app. Para o
+"oponente" coletar, use `POST /api/interacoes` com a latitude/longitude do ponto.
 
 ### Comportamentos normais (não são erros)
 

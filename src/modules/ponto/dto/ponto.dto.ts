@@ -17,6 +17,10 @@ export interface PontoDto {
   raioGeofence: number;
   pontosRecompensa: number;
   ativo: boolean;
+  /** História/curiosidade do card do local exibido após a coleta. */
+  curiosidade: string | null;
+  /** Foto do local — relativa ao servidor (ex.: `/imagens/biblioteca.jpg`) ou absoluta. */
+  imagemUrl: string | null;
   objeto3d: Objeto3DDto | null;
 }
 

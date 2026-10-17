@@ -11,6 +11,8 @@ import { distanciaEmMetros } from '../../shared/utils/geo';
 import * as usuarioService from '../usuario/usuario.service';
 import * as pontoService from '../ponto/ponto.service';
 import * as conquistaService from '../conquista/conquista.service';
+import * as desafioService from '../desafio/desafio.service';
+import { ColetaDesafioDto } from '../desafio/dto/desafio.dto';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import { PontoComObjeto } from '../ponto/entities/ponto-de-interesse.entity';
 import { Conquista } from '../conquista/entities/conquista.entity';
@@ -24,11 +26,16 @@ import { RegistrarInteracaoDto } from './dto/registrar-interacao.dto';
 const PRECISAO_MAXIMA_M = 50;
 
 export interface ResultadoCheckin {
-  interacao: Interacao;
+  /** Null quando o ponto já tinha sido coletado e o toque só contou para o desafio. */
+  interacao: Interacao | null;
   ponto: PontoComObjeto;
   usuario: Usuario;
   distanciaMetros: number;
+  /** Pontos do ponto de interesse (0 se já tinha sido coletado antes). */
+  pontosGanhos: number;
   novasConquistas: Conquista[];
+  /** Efeito no desafio 1x1 em andamento, se o ponto faz parte dele. */
+  desafio: ColetaDesafioDto | null;
 }
 
 /**
@@ -36,9 +43,10 @@ export interface ResultadoCheckin {
  *
  * Toda tentativa vira uma `Interacao`: dentro do raio com `validadoGeofence = true`
  * (e os pontos são creditados), fora dele com `false`, como registro da tentativa.
- * Cada ponto só rende pontos uma vez por usuário.
+ * Cada ponto só rende pontos uma vez por usuário — mas, se ele faz parte do
+ * desafio em andamento, a coleta conta para o desafio mesmo que já tenha sido feita.
  *
- * @throws AppError 404 (ponto), 409 (já coletado) ou 422 (fora do raio)
+ * @throws AppError 404 (ponto), 409 (já coletado e fora de desafio) ou 422 (fora do raio)
  */
 export async function registrar(
   usuarioId: number,
@@ -72,29 +80,54 @@ export async function registrar(
     const jaColetado = await tx.interacao.findFirst({
       where: { usuarioId, pontoDeInteresseId: pontoId, validadoGeofence: true },
     });
-    if (jaColetado) return { tipo: 'jaColetado' as const };
-
-    const interacao = await tx.interacao.create({
-      data: {
-        usuarioId,
-        pontoDeInteresseId: pontoId,
-        latitudeRegistro: latitude,
-        longitudeRegistro: longitude,
-        validadoGeofence: dentroDoRaio,
-      },
-    });
+    const pendenteNoDesafio = await desafioService.pontoPendente(tx, usuarioId, pontoId);
+    if (jaColetado && !pendenteNoDesafio) return { tipo: 'jaColetado' as const };
 
     // Fora do raio a transação é confirmada assim mesmo: a tentativa fica registrada.
-    if (!dentroDoRaio) return { tipo: 'foraDoRaio' as const };
+    if (!dentroDoRaio) {
+      await tx.interacao.create({
+        data: {
+          usuarioId,
+          pontoDeInteresseId: pontoId,
+          latitudeRegistro: latitude,
+          longitudeRegistro: longitude,
+          validadoGeofence: false,
+        },
+      });
+      return { tipo: 'foraDoRaio' as const };
+    }
 
-    const usuario = await usuarioService.adicionarPontos(tx, usuarioId, ponto.pontosRecompensa);
-    const novasConquistas = await conquistaService.desbloquearPorPontuacao(
-      tx,
-      usuarioId,
-      usuario.pontuacaoTotal
-    );
+    let interacao: Interacao | null = null;
+    let novasConquistas: Conquista[] = [];
 
-    return { tipo: 'coletado' as const, interacao, usuario, novasConquistas };
+    if (!jaColetado) {
+      interacao = await tx.interacao.create({
+        data: {
+          usuarioId,
+          pontoDeInteresseId: pontoId,
+          latitudeRegistro: latitude,
+          longitudeRegistro: longitude,
+          validadoGeofence: true,
+        },
+      });
+      const usuario = await usuarioService.adicionarPontos(tx, usuarioId, ponto.pontosRecompensa);
+      novasConquistas = await conquistaService.desbloquearPorPontuacao(tx, usuarioId, usuario.pontuacaoTotal);
+    }
+
+    // Pode finalizar o desafio (vitória) e somar o bônus.
+    const noDesafio = pendenteNoDesafio
+      ? await desafioService.registrarColeta(tx, usuarioId, pontoId)
+      : null;
+    if (noDesafio) novasConquistas = [...novasConquistas, ...noDesafio.novasConquistas];
+
+    return {
+      tipo: 'coletado' as const,
+      interacao,
+      usuario: await usuarioService.obterPorId(usuarioId, tx),
+      pontosGanhos: jaColetado ? 0 : ponto.pontosRecompensa,
+      novasConquistas,
+      desafio: noDesafio?.coleta ?? null,
+    };
   });
 
   if (resultado.tipo === 'jaColetado') {
@@ -110,7 +143,10 @@ export async function registrar(
     );
   }
 
-  console.log(`[CHECK-IN] usuario=${usuarioId} coletou ponto=${pontoId} (+${ponto.pontosRecompensa})`);
+  console.log(
+    `[CHECK-IN] usuario=${usuarioId} coletou ponto=${pontoId} (+${resultado.pontosGanhos})` +
+      (resultado.desafio ? ` — desafio ${resultado.desafio.coletados}/${resultado.desafio.total}` : '')
+  );
 
   return { ...resultado, ponto, distanciaMetros };
 }

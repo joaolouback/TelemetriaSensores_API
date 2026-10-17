@@ -8,6 +8,12 @@ import prisma from '../src/shared/database/prisma';
 /** Centro aproximado do campus da UVV (Boa Vista, Vila Velha/ES). */
 const CAMPUS_UVV = { latitude: -20.3417, longitude: -40.2917 };
 
+/**
+ * Card do local (exibido no app depois da coleta): cada ponto aceita também
+ *   curiosidade: 'História ou curiosidade real sobre o local',
+ *   imagemUrl: '/imagens/biblioteca.jpg',   // arquivo em public/imagens/
+ * Sem `curiosidade`, o card mostra só a descrição. Preencha com conteúdo verificado.
+ */
 const PONTOS = [
   {
     nome: 'Prédio Azul',

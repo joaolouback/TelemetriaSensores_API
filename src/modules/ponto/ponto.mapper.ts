@@ -20,6 +20,8 @@ export const toPontoDto = (ponto: PontoComObjeto): PontoDto => ({
   raioGeofence: ponto.raioGeofence,
   pontosRecompensa: ponto.pontosRecompensa,
   ativo: ponto.ativo,
+  curiosidade: ponto.curiosidade,
+  imagemUrl: ponto.imagemUrl,
   objeto3d: ponto.objeto3d ? toObjeto3DDto(ponto.objeto3d) : null,
 });
 
