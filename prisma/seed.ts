@@ -91,6 +91,16 @@ const PONTOS = [
   },
 ];
 
+/**
+ * Modelo 3D de cada ponto. `assetUrl` é relativo à API (servido de `public/modelos/`);
+ * o app completa com o endereço do servidor. Gerado por `npm run modelos:gerar`.
+ */
+const OBJETO_3D_PADRAO = {
+  assetUrl: '/modelos/cristal.glb',
+  formato: 'GLB',
+  escala: 0.25,
+};
+
 const CONQUISTAS = [
   {
     titulo: 'Primeiros Passos',
@@ -130,16 +140,26 @@ async function main() {
       where: { nome: ponto.nome },
     });
 
+    let pontoId: number;
     if (existente) {
       await prisma.pontoDeInteresse.update({
         where: { id: existente.id },
         data: ponto,
       });
+      pontoId = existente.id;
       console.log(`  ~ atualizado: ${ponto.nome}`);
     } else {
-      await prisma.pontoDeInteresse.create({ data: ponto });
+      pontoId = (await prisma.pontoDeInteresse.create({ data: ponto })).id;
       console.log(`  + criado: ${ponto.nome}`);
     }
+
+    // Objeto coletado em realidade aumentada ao chegar no ponto.
+    const objeto = { nome: `Cristal — ${ponto.nome}`, ...OBJETO_3D_PADRAO };
+    await prisma.objeto3D.upsert({
+      where: { pontoDeInteresseId: pontoId },
+      update: objeto,
+      create: { ...objeto, pontoDeInteresseId: pontoId },
+    });
   }
 
   for (const conquista of CONQUISTAS) {

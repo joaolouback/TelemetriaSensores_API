@@ -70,7 +70,8 @@ Documentação interativa em `http://localhost:3000/api-docs`.
 | `npm start` | Roda a versão compilada |
 | `npm run db:up` | Sobe o Postgres via Docker |
 | `npm run db:migrate` | Cria/aplica migrations |
-| `npm run db:seed` | Popula os pontos de interesse e conquistas |
+| `npm run db:seed` | Popula os pontos de interesse, seus objetos 3D e as conquistas |
+| `npm run modelos:gerar` | Regera o modelo 3D padrão (`public/modelos/cristal.glb`) |
 | `npm run db:studio` | Abre o Prisma Studio (navegador do banco) |
 | `npm run db:reset` | Apaga e recria o banco do zero |
 
@@ -120,6 +121,37 @@ Ambos respondem `{ "token": "<JWT>", "usuario": { "id", "nome", "email", ... } }
 O token vale 30 dias e vai no header `Authorization: Bearer <token>`.
 
 **`GET /api/auth/me`** — dados do usuário do token.
+
+### Check-in (coleta em realidade aumentada)
+
+Ao entrar no raio de um ponto, o app libera a câmera AR. O objeto 3D do ponto aparece
+sobre o chão (ARCore) e **só ao tocar nele** o app chama o check-in:
+
+**`POST /api/interacoes`** — requer `Authorization: Bearer <token>`.
+```json
+{ "pontoId": 1, "latitude": -20.34105, "longitude": -40.2923 }
+```
+O servidor **revalida o geofence** com a posição enviada (não confia na distância do
+aparelho) e registra uma `Interacao`:
+
+| Situação | Resposta | Efeito |
+| --- | --- | --- |
+| Dentro do raio, 1ª coleta | `201` | `validadoGeofence = true`, soma `pontosRecompensa` em `pontuacaoTotal`, desbloqueia conquistas |
+| Fora do raio | `422` (com `distanciaMetros`) | Tentativa registrada com `validadoGeofence = false`, sem pontos |
+| Ponto já coletado | `409` | Nada — cada ponto rende pontos uma única vez por usuário |
+
+```json
+{ "pontosGanhos": 10, "pontuacaoTotal": 25, "distanciaMetros": 4.2,
+  "novasConquistas": [ { "id": 1, "titulo": "Primeiros Passos", ... } ], "interacao": { ... } }
+```
+
+**`GET /api/interacoes/minhas`** — `{ "pontosColetados": [1, 4], "pontuacaoTotal": 25 }`.
+O app usa para não oferecer a câmera em pontos já coletados.
+
+**Modelos 3D:** servidos em `/modelos/*.glb` (pasta `public/modelos/`). O `assetUrl` do
+`Objeto3D` pode ser relativo (`/modelos/cristal.glb`, completado pelo app com o endereço
+da API) ou uma URL absoluta. Para usar um modelo próprio, coloque o `.glb` na pasta e
+ajuste `OBJETO_3D_PADRAO` (ou cada ponto) em `prisma/seed.ts`.
 
 ### Telemetria
 

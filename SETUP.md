@@ -18,10 +18,16 @@ Instale no computador:
 - **[Node.js 18 ou superior](https://nodejs.org)** — confira com `node --version`
 - **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** — usado para subir o banco de dados
 - **[Git](https://git-scm.com/downloads)**
+- **[Android Studio](https://developer.android.com/studio)** — necessário para compilar o app
+  (a realidade aumentada usa ARCore, que **não roda no Expo Go**). Na instalação, deixe
+  marcados *Android SDK* e *Android SDK Platform-Tools*. O Android Studio já traz o JDK.
 
 No **celular Android**:
 
-- **Expo Go**, pela [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+- Um aparelho **compatível com ARCore** ([lista oficial](https://developers.google.com/ar/devices))
+  com o app **Google Play Services para RA** (instalado automaticamente na maioria dos aparelhos)
+- **Depuração USB** ativada: *Configurações → Sobre o telefone →* toque 7× em *Número da versão*,
+  depois *Opções do desenvolvedor → Depuração USB*
 
 > **Importante:** o celular e o computador precisam estar na **mesma rede Wi-Fi**.
 > Não funciona com o celular no 4G, nem em redes que isolam dispositivos
@@ -124,21 +130,41 @@ npm install
 
 Não é preciso criar `.env` aqui — o app descobre o endereço da API sozinho.
 
-### 3.2 Iniciar
+### 3.2 Chave do Google Maps
+
+Fora do Expo Go o mapa do Google exige uma chave própria (sem ela o mapa abre **cinza**).
+
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e ative
+   a **Maps SDK for Android**
+2. Em *Credenciais*, crie uma **chave de API**
+3. Cole a chave em `app.json`, no lugar de `COLOQUE_SUA_CHAVE_DO_GOOGLE_MAPS_AQUI`
+
+O uso no Maps SDK for Android é gratuito, mas o Google pede uma conta de faturamento no projeto.
+
+### 3.3 Compilar e instalar no celular (só na primeira vez)
+
+Conecte o celular no computador pelo **cabo USB** (aceite o aviso de depuração na tela
+do celular) e rode:
+
+```bash
+npm run android
+```
+
+Isso compila o app com o ARCore e instala o **UVV Go** no celular. A primeira compilação
+demora bastante (10–20 minutos); as seguintes são bem mais rápidas.
+
+Só é preciso compilar de novo quando mudar uma dependência nativa ou o `app.json`.
+Mudanças no código TypeScript aparecem na hora, sem recompilar.
+
+### 3.4 Abrir no dia a dia
 
 ```bash
 npm start
 ```
 
-Vai aparecer um **QR code** no terminal.
-
-### 3.3 Abrir no celular
-
-1. Abra o **Expo Go** no Android
-2. Toque em **Scan QR code**
-3. Aponte para o QR code do terminal
-4. Aguarde o carregamento (a primeira vez demora mais)
-5. Quando o app pedir **permissão de localização**, toque em **Permitir**
+Abra o app **UVV Go** no celular (não o Expo Go) e escolha o servidor que aparece na lista,
+ou escaneie o QR code do terminal. Quando o app pedir **permissão de localização**, toque
+em **Permitir**. A permissão de **câmera** é pedida na primeira coleta em AR.
 
 ---
 
@@ -156,6 +182,16 @@ O app abre na aba **Mapa**.
 - No rodapé aparece o **ponto mais próximo** e a distância, que muda conforme você anda
 - A lista horizontal mostra os 10 pontos ordenados por distância; tocar em um leva a câmera até ele
 - Na aba **Sensores**, o botão *Iniciar Coleta* começa a gravar e sincronizar a telemetria
+
+### Coleta em realidade aumentada (no campus)
+
+1. Entre no raio de um ponto: o círculo fica verde e aparece **📷 Abrir câmera AR**
+2. Toque no botão e aponte a câmera para o chão, movendo o celular devagar
+3. O **cristal dourado** aparece sobre o chão, girando (se o chão não for reconhecido
+   em ~8 s, ele aparece flutuando à sua frente)
+4. **Toque no cristal**: ele é coletado, aparecem os pontos ganhos e as conquistas
+5. De volta ao mapa, o marcador do ponto fica dourado e a lista mostra ✓ — o mesmo
+   ponto não rende pontos de novo
 
 ### Comportamentos normais (não são erros)
 
@@ -200,8 +236,25 @@ O banco não está no ar. Abra o Docker Desktop e rode `npm run db:up` de novo.
 
 ### O mapa abre cinza, só com a logo do Google
 
-Acontece em APK gerado sem chave do Google Maps. **No Expo Go não deve ocorrer** —
-se ocorreu, confirme que está mesmo abrindo pelo Expo Go, e não por um APK instalado.
+Falta a chave do Google Maps (seção 3.2). Depois de colar a chave no `app.json`,
+rode `npm run android` de novo — a chave entra na compilação.
+
+### "AR indisponível neste aparelho"
+
+O celular não está na [lista do ARCore](https://developers.google.com/ar/devices) ou falta
+o app *Google Play Services para RA* — instale-o pela Play Store.
+
+### O cristal não aparece na câmera
+
+Ele vem da API (`http://<ip-do-computador>:3000/modelos/cristal.glb`). Confira se esse
+endereço abre no navegador do celular. Se não abrir, é o mesmo problema de rede/firewall
+da faixa vermelha (abaixo).
+
+### `npm run android`: "SDK location not found" / "adb não encontrado"
+
+O Android Studio não está instalado ou o SDK não foi baixado. Abra o Android Studio uma
+vez, conclua o assistente inicial e tente de novo. Confira com `adb devices` se o celular
+aparece como `device` (e não `unauthorized` — nesse caso aceite o aviso no celular).
 
 ### Quero recomeçar o banco do zero
 
@@ -232,6 +285,6 @@ npm run dev
 # Terminal 2 — app
 cd TelemetriaSensores
 npm install
-npm start
-# escanear o QR code com o Expo Go
+npm run android   # só na primeira vez (celular no USB) — compila e instala o UVV Go
+npm start         # no dia a dia; abrir o app UVV Go no celular
 ```
