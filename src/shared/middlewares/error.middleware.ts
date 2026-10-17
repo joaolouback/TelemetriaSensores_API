@@ -15,9 +15,19 @@ export const errorMiddleware = (
     return;
   }
 
-  // JSON malformado no corpo da requisição (lançado pelo express.json()).
-  if (erro instanceof SyntaxError && 'body' in erro) {
+  // Erros do express.json(): JSON malformado, corpo grande demais etc.
+  const tipo = (erro as { type?: string } | null)?.type;
+  if (tipo === 'entity.parse.failed') {
     res.status(400).json({ error: 'Corpo da requisição não é um JSON válido.' });
+    return;
+  }
+  if (tipo === 'entity.too.large') {
+    res.status(413).json({ error: 'Requisição grande demais. Envie os registros em lotes menores.' });
+    return;
+  }
+  const status = (erro as { status?: number } | null)?.status;
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    res.status(status).json({ error: 'Requisição inválida.' });
     return;
   }
 

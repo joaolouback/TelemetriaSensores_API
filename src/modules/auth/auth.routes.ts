@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../shared/http/async-handler';
 import { autenticar } from '../../shared/middlewares/auth.middleware';
+import { limiteLogin, limiteRegistro } from '../../shared/middlewares/rate-limit.middleware';
 import { registrar, login, perfil } from './auth.controller';
 
 const router = Router();
@@ -34,8 +35,10 @@ const router = Router();
  *         description: Dados inválidos
  *       409:
  *         description: E-mail já cadastrado
+ *       429:
+ *         description: Limite de cadastros por rede atingido (30 a cada 15 min)
  */
-router.post('/auth/registro', asyncHandler(registrar));
+router.post('/auth/registro', limiteRegistro, asyncHandler(registrar));
 
 /**
  * @swagger
@@ -61,8 +64,10 @@ router.post('/auth/registro', asyncHandler(registrar));
  *         description: Login realizado. Retorna o token JWT e os dados do usuário.
  *       401:
  *         description: E-mail ou senha incorretos
+ *       429:
+ *         description: Muitas tentativas erradas para este e-mail (10 a cada 15 min)
  */
-router.post('/auth/login', asyncHandler(login));
+router.post('/auth/login', limiteLogin, asyncHandler(login));
 
 /**
  * @swagger

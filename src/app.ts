@@ -13,7 +13,9 @@ const app = express();
 
 
 app.use(cors());
-app.use(express.json());
+// Lotes de telemetria acumulados offline passam fácil do padrão de 100 KB (~400 registros).
+// O app envia em lotes de até 200; o limite folgado cobre versões antigas do app.
+app.use(express.json({ limit: '2mb' }));
 // Documentação Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

@@ -18,16 +18,13 @@ Instale no computador:
 - **[Node.js 18 ou superior](https://nodejs.org)** — confira com `node --version`
 - **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** — usado para subir o banco de dados
 - **[Git](https://git-scm.com/downloads)**
-- **[Android Studio](https://developer.android.com/studio)** — necessário para compilar o app
-  (a realidade aumentada usa ARCore, que **não roda no Expo Go**). Na instalação, deixe
-  marcados *Android SDK* e *Android SDK Platform-Tools*. O Android Studio já traz o JDK.
+- Uma **conta gratuita na [Expo](https://expo.dev/signup)** — o app é compilado na nuvem
+  da Expo (EAS Build), porque a realidade aumentada usa ARCore, que **não roda no Expo Go**
 
 No **celular Android**:
 
 - Um aparelho **compatível com ARCore** ([lista oficial](https://developers.google.com/ar/devices))
   com o app **Google Play Services para RA** (instalado automaticamente na maioria dos aparelhos)
-- **Depuração USB** ativada: *Configurações → Sobre o telefone →* toque 7× em *Número da versão*,
-  depois *Opções do desenvolvedor → Depuração USB*
 
 > **Importante:** o celular e o computador precisam estar na **mesma rede Wi-Fi**.
 > Não funciona com o celular no 4G, nem em redes que isolam dispositivos
@@ -136,25 +133,49 @@ Fora do Expo Go o mapa do Google exige uma chave própria (sem ela o mapa abre *
 
 1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e ative
    a **Maps SDK for Android**
-2. Em *Credenciais*, crie uma **chave de API**
-3. Cole a chave em `app.json`, no lugar de `COLOQUE_SUA_CHAVE_DO_GOOGLE_MAPS_AQUI`
+2. Em *Credenciais*, crie uma **chave de API**. Para testar, restrinja a chave à API
+   *Maps SDK for Android* (em *Restrições de API*)
 
-O uso no Maps SDK for Android é gratuito, mas o Google pede uma conta de faturamento no projeto.
+O mapa em apps Android é gratuito, mas o Google pede uma conta de faturamento (cartão) no projeto.
 
-### 3.3 Compilar e instalar no celular (só na primeira vez)
+A chave **não vai no código** (o `app.config.js` lê a variável `GOOGLE_MAPS_API_KEY`).
+Ela é cadastrada na Expo no próximo passo.
 
-Conecte o celular no computador pelo **cabo USB** (aceite o aviso de depuração na tela
-do celular) e rode:
+### 3.3 Compilar na nuvem e instalar no celular (só na primeira vez)
+
+Na pasta do app, entre na sua conta Expo e vincule o projeto (só na primeira vez):
 
 ```bash
-npm run android
+npx eas-cli login
 ```
 
-Isso compila o app com o ARCore e instala o **UVV Go** no celular. A primeira compilação
-demora bastante (10–20 minutos); as seguintes são bem mais rápidas.
+```bash
+npx eas-cli init
+```
 
-Só é preciso compilar de novo quando mudar uma dependência nativa ou o `app.json`.
-Mudanças no código TypeScript aparecem na hora, sem recompilar.
+Cadastre a chave do Google Maps na Expo (troque `SUA_CHAVE` pela chave do passo 3.2):
+
+```bash
+npx eas-cli env:create --name GOOGLE_MAPS_API_KEY --value SUA_CHAVE --environment development --visibility sensitive
+```
+
+Dispare o build:
+
+```bash
+npm run build:android
+```
+
+Na primeira vez o EAS pergunta sobre a chave de assinatura Android — responda **Yes**
+para ele gerar uma. O build roda nos servidores da Expo (de 10 a 30 minutos, mais a fila do
+plano gratuito). No fim aparece um **QR code** e um link: abra no celular Android, baixe o
+APK e instale (o Android pede para permitir a instalação de apps de fora da Play Store).
+
+Só é preciso compilar de novo quando mudar uma dependência nativa, o `app.json`/`app.config.js`
+ou a chave. Mudanças no código TypeScript aparecem na hora, sem recompilar.
+
+> **Alternativa sem a nuvem:** com o [Android Studio](https://developer.android.com/studio)
+> instalado e o celular no USB (com *Depuração USB* ativada), `npm run android` compila e
+> instala localmente. Nesse caso a chave vai no `.env` do app: `GOOGLE_MAPS_API_KEY=...`.
 
 ### 3.4 Abrir no dia a dia
 
@@ -163,8 +184,10 @@ npm start
 ```
 
 Abra o app **UVV Go** no celular (não o Expo Go) e escolha o servidor que aparece na lista,
-ou escaneie o QR code do terminal. Quando o app pedir **permissão de localização**, toque
-em **Permitir**. A permissão de **câmera** é pedida na primeira coleta em AR.
+ou escaneie o QR code do terminal. Na primeira abertura aparece a tela **Sua privacidade**:
+aceite para gravar a telemetria (ou continue sem compartilhar — o jogo funciona igual; dá
+para mudar no Perfil). Quando o app pedir **permissão de localização**, toque em
+**Permitir**. A permissão de **câmera** é pedida na primeira coleta em AR.
 
 ---
 
@@ -192,6 +215,17 @@ O app abre na aba **Mapa**.
 4. **Toque no cristal**: ele é coletado, aparecem os pontos ganhos e as conquistas
 5. De volta ao mapa, o marcador do ponto fica dourado e a lista mostra ✓ — o mesmo
    ponto não rende pontos de novo
+
+### Testar longe do campus (modo simulação)
+
+Em desenvolvimento (`npm start`), **segure o dedo sobre um ponto** na lista horizontal do
+mapa: o app passa a usar a posição desse ponto no lugar do GPS. O topo mostra
+"🧪 Simulando posição em …", aparece um marcador roxo e o botão da câmera AR é liberado.
+Toque em **Usar GPS** para voltar à posição real.
+
+A posição simulada também é a enviada no check-in, então os pontos são creditados de
+verdade no banco. Para recomeçar, use outra conta ou `npm run db:reset && npm run db:seed`.
+O modo não existe no build de produção.
 
 ### Comportamentos normais (não são erros)
 
@@ -236,8 +270,9 @@ O banco não está no ar. Abra o Docker Desktop e rode `npm run db:up` de novo.
 
 ### O mapa abre cinza, só com a logo do Google
 
-Falta a chave do Google Maps (seção 3.2). Depois de colar a chave no `app.json`,
-rode `npm run android` de novo — a chave entra na compilação.
+Falta a chave do Google Maps (seções 3.2 e 3.3), ou a *Maps SDK for Android* não está
+ativada no projeto do Google Cloud. A chave entra na compilação: depois de cadastrá-la,
+rode `npm run build:android` de novo e reinstale o APK.
 
 ### "AR indisponível neste aparelho"
 
@@ -285,6 +320,6 @@ npm run dev
 # Terminal 2 — app
 cd TelemetriaSensores
 npm install
-npm run android   # só na primeira vez (celular no USB) — compila e instala o UVV Go
-npm start         # no dia a dia; abrir o app UVV Go no celular
+npm run build:android   # só na primeira vez — compila na nuvem; instalar o APK pelo QR code
+npm start               # no dia a dia; abrir o app UVV Go no celular
 ```

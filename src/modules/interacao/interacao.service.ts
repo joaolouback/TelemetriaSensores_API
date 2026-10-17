@@ -17,6 +17,12 @@ import { Conquista } from '../conquista/entities/conquista.entity';
 import { Interacao } from './entities/interacao.entity';
 import { RegistrarInteracaoDto } from './dto/registrar-interacao.dto';
 
+/**
+ * Pior precisão de GPS aceita no check-in. Com raios de 20–30 m, uma leitura de ±50 m
+ * já não garante que a pessoa está no ponto; dentro de prédios o GPS costuma ficar abaixo disso.
+ */
+const PRECISAO_MAXIMA_M = 50;
+
 export interface ResultadoCheckin {
   interacao: Interacao;
   ponto: PontoComObjeto;
@@ -36,8 +42,22 @@ export interface ResultadoCheckin {
  */
 export async function registrar(
   usuarioId: number,
-  { pontoId, latitude, longitude }: RegistrarInteracaoDto
+  { pontoId, latitude, longitude, precisao, mockado }: RegistrarInteracaoDto
 ): Promise<ResultadoCheckin> {
+  // Anti-trapaça: o servidor só recebe a posição que o celular informa, então
+  // recusa as que o próprio sistema marca como falsas ou imprecisas demais.
+  if (mockado) {
+    console.log(`[CHECK-IN] GPS falso recusado: usuario=${usuarioId} ponto=${pontoId}`);
+    throw new AppError(422, 'Localização simulada detectada. Desative apps de GPS falso para coletar.');
+  }
+  if (precisao != null && precisao > PRECISAO_MAXIMA_M) {
+    throw new AppError(
+      422,
+      `Sinal de GPS impreciso (±${Math.round(precisao)} m). Vá para um local mais aberto e tente de novo.`,
+      { precisao, precisaoMaxima: PRECISAO_MAXIMA_M }
+    );
+  }
+
   const ponto = await pontoService.obterAtivoPorId(pontoId);
 
   const distancia = distanciaEmMetros(latitude, longitude, ponto.latitude, ponto.longitude);

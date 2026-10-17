@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { validar } from '../../shared/http/validar';
-import { AuthRequest } from '../../shared/middlewares/auth.middleware';
+import { AuthRequest, AuthenticatedRequest } from '../../shared/middlewares/auth.middleware';
 import * as telemetriaService from './telemetria.service';
 import { toTelemetriaDto } from './telemetria.mapper';
 import { syncLoteSchema } from './dto/sync-log.dto';
@@ -18,12 +18,12 @@ export const syncData = async (req: AuthRequest, res: Response) => {
   res.status(200).json({ message: 'Sincronização realizada com sucesso', insertedCount });
 };
 
-/** GET /api/logs?page=&limit= — consulta paginada. */
-export const getLogs = async (req: Request, res: Response) => {
+/** GET /api/logs?page=&limit= — consulta paginada (só os próprios registros, ou todos para admin). */
+export const getLogs = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`\n[${new Date().toISOString()}] Recebendo requisição GET /logs`);
 
   const filtro = validar(listarLogsSchema, req.query);
-  const { registros, total } = await telemetriaService.listar(filtro);
+  const { registros, total } = await telemetriaService.listar(filtro, req.usuarioId);
 
   const resposta: LogsPaginadosDto = {
     data: registros.map(toTelemetriaDto),

@@ -163,6 +163,12 @@ O token vale 30 dias e vai no header `Authorization: Bearer <token>`.
 
 **`GET /api/auth/me`** — dados do usuário do token.
 
+**Limite de tentativas** (proteção contra força bruta, responde `429`): 10 senhas erradas
+por e-mail e IP a cada 15 min — no Wi-Fi do campus vários alunos dividem o IP, então errar
+a senha de uma conta não bloqueia as outras — e 30 cadastros por IP a cada 15 min.
+
+No Swagger (`/api-docs`), use o botão **Authorize** e cole o token para testar as rotas protegidas.
+
 ### Check-in (coleta em realidade aumentada)
 
 Ao entrar no raio de um ponto, o app libera a câmera AR. O objeto 3D do ponto aparece
@@ -170,16 +176,23 @@ sobre o chão (ARCore) e **só ao tocar nele** o app chama o check-in:
 
 **`POST /api/interacoes`** — requer `Authorization: Bearer <token>`.
 ```json
-{ "pontoId": 1, "latitude": -20.34105, "longitude": -40.2923 }
+{ "pontoId": 1, "latitude": -20.34105, "longitude": -40.2923, "precisao": 8, "mockado": false }
 ```
-O servidor **revalida o geofence** com a posição enviada (não confia na distância do
-aparelho) e registra uma `Interacao`:
+`precisao` (metros, `coords.accuracy`) e `mockado` (`location.mocked` do Android) são
+opcionais. O servidor **revalida o geofence** com a posição enviada (não confia na
+distância do aparelho) e registra uma `Interacao`:
 
 | Situação | Resposta | Efeito |
 | --- | --- | --- |
 | Dentro do raio, 1ª coleta | `201` | `validadoGeofence = true`, soma `pontosRecompensa` em `pontuacaoTotal`, desbloqueia conquistas |
 | Fora do raio | `422` (com `distanciaMetros`) | Tentativa registrada com `validadoGeofence = false`, sem pontos |
+| GPS falso (`mockado: true`) ou `precisao` > 50 m | `422` | Nada é registrado |
 | Ponto já coletado | `409` | Nada — cada ponto rende pontos uma única vez por usuário |
+
+> **Anti-trapaça:** como o servidor só conhece a posição que o celular informa, ele recusa
+> as que o próprio Android marca como simuladas (apps de "fake GPS") e as imprecisas demais
+> para garantir presença num raio de 20–30 m. O modo simulação do app existe só em
+> desenvolvimento e não vai para o build final.
 
 ```json
 { "pontosGanhos": 10, "pontuacaoTotal": 25, "distanciaMetros": 4.2,
@@ -198,7 +211,9 @@ ajuste `OBJETO_3D_PADRAO` (ou cada ponto) em `prisma/seed.ts`.
 
 **`POST /api/sync`** — sincronização em lote dos logs guardados offline no SQLite.
 As colunas seguem a classe `TelemetriaSensor` do diagrama. Se o header
-`Authorization` for enviado, os registros são associados ao usuário do token.
+`Authorization` for enviado, os registros são associados ao usuário do token; sem ele,
+ficam anônimos. O app envia em lotes de até 200 registros (o corpo aceita até 2 MB;
+acima disso a resposta é `413`).
 ```http
 POST http://localhost:3000/api/sync
 Content-Type: application/json
@@ -216,6 +231,8 @@ Authorization: Bearer <token>
 Resposta: `{ "message": "Sincronização realizada com sucesso", "insertedCount": 1 }`
 
 **`GET /api/logs?page=1&limit=10`** — consulta paginada dos registros sincronizados.
+Requer token. Como a telemetria contém a localização das pessoas, cada usuário vê **só os
+próprios registros**; quem tem registro na tabela `administrador` vê todos.
 
 ### WebSocket (`ws://localhost:3000/ws`)
 
@@ -234,6 +251,9 @@ Resposta:
   para o schema do Prisma. Valores inválidos (`NaN`, datas quebradas) são saneados.
   Os nomes antigos do app (`accel_x`, `battery_level`, `network_type`, `created_at`)
   continuam aceitos, para aparelhos que ainda não atualizaram.
-- O campo `usuarioId` em `TelemetriaSensor` é opcional: o app coleta desde a
-  abertura, antes do login. Com token, o usuário do token prevalece sobre
-  qualquer `usuario_id` enviado no corpo.
+- O campo `usuarioId` em `TelemetriaSensor` é opcional: com consentimento, o app
+  pode coletar antes do login. O dono dos registros vem **só do token** — um
+  `usuario_id` no corpo é ignorado, para ninguém gravar telemetria em nome de outro.
+- **LGPD:** o app só coleta telemetria depois que o usuário aceita (tela de
+  consentimento na primeira abertura; pode desligar no Perfil, o que apaga do aparelho
+  o que ainda não foi enviado). Sem o aceite, o jogo funciona igual.

@@ -28,6 +28,14 @@ const router = Router();
  *               longitude:
  *                 type: number
  *                 example: -40.2923
+ *               precisao:
+ *                 type: number
+ *                 description: Precisão do GPS em metros. Acima de 50 m o check-in é recusado (422).
+ *                 example: 8
+ *               mockado:
+ *                 type: boolean
+ *                 description: true se o Android indicar localização simulada (app de GPS falso). Recusado com 422.
+ *                 example: false
  *     responses:
  *       201:
  *         description: Objeto coletado. Retorna os pontos ganhos, a nova pontuação total e as conquistas desbloqueadas.
@@ -40,7 +48,7 @@ const router = Router();
  *       409:
  *         description: O usuário já coletou este ponto
  *       422:
- *         description: Fora do raio de geofence (a tentativa fica registrada com validadoGeofence = false)
+ *         description: Fora do raio de geofence (a tentativa fica registrada com validadoGeofence = false), GPS falso ou precisão acima de 50 m
  */
 router.post('/interacoes', autenticar, asyncHandler(registrarInteracao));
 

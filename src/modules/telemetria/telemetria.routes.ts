@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../shared/http/async-handler';
-import { autenticacaoOpcional } from '../../shared/middlewares/auth.middleware';
+import { autenticar, autenticacaoOpcional } from '../../shared/middlewares/auth.middleware';
 import { syncData, getLogs } from './telemetria.controller';
 
 const router = Router();
@@ -10,7 +10,7 @@ const router = Router();
  * /api/sync:
  *   post:
  *     summary: Sincroniza logs de telemetria em lote
- *     description: Recebe um array de logs armazenados offline pelo aplicativo mobile e realiza bulk insert no banco. Se o header `Authorization Bearer <token>` for enviado, os registros são associados ao usuário autenticado.
+ *     description: Recebe um array de logs armazenados offline pelo aplicativo mobile e realiza bulk insert no banco. Se o header `Authorization Bearer <token>` for enviado, os registros são associados ao usuário autenticado; sem token ficam anônimos (um `usuario_id` no corpo é ignorado).
  *     requestBody:
  *       required: true
  *       content:
@@ -62,7 +62,7 @@ router.post('/sync', autenticacaoOpcional, asyncHandler(syncData));
  * /api/logs:
  *   get:
  *     summary: Retorna os logs de telemetria salvos
- *     description: Lista paginada dos logs sincronizados.
+ *     description: Lista paginada dos logs sincronizados. A telemetria contém localização, então cada usuário vê só os próprios registros; administradores veem todos. Requer o header `Authorization Bearer <token>`.
  *     parameters:
  *       - in: query
  *         name: page
@@ -80,6 +80,6 @@ router.post('/sync', autenticacaoOpcional, asyncHandler(syncData));
  *       500:
  *         description: Erro interno no servidor
  */
-router.get('/logs', asyncHandler(getLogs));
+router.get('/logs', autenticar, asyncHandler(getLogs));
 
 export default router;

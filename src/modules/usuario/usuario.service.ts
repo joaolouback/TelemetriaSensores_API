@@ -15,7 +15,12 @@ export async function obterPorId(id: number): Promise<Usuario> {
   return usuario;
 }
 
-export const criar = (dados: { nome: string; email: string; senhaHash: string }): Promise<Usuario> =>
+/** Administradores (classe Administrador do diagrama) têm acesso a dados de todos os usuários. */
+export async function ehAdministrador(id: number): Promise<boolean> {
+  return (await prisma.administrador.count({ where: { id } })) > 0;
+}
+
+export const criar =(dados: { nome: string; email: string; senhaHash: string }): Promise<Usuario> =>
   prisma.usuario.create({ data: dados });
 
 /** Soma pontos à pontuação total. Recebe o `tx` quando faz parte de uma transação. */

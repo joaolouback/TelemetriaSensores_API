@@ -34,17 +34,12 @@ const parseData = (value: any): Date => {
   return new Date();
 };
 
-const parseUsuarioId = (value: any): number | null => {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : null;
-};
-
 /**
  * Converte um array de logs brutos em objetos no formato do model TelemetriaSensor (tabela `telemetria_sensor`).
  *
- * @param usuarioAutenticado id vindo do token JWT. Quando presente, prevalece sobre o
- * `usuario_id` enviado no corpo — o cliente não pode gravar telemetria em nome de outro usuário.
+ * @param usuarioAutenticado id vindo do token JWT — a ÚNICA fonte do dono dos registros.
+ * Um `usuario_id` no corpo é ignorado: sem token, os registros ficam anônimos, para que
+ * ninguém grave telemetria em nome de outro usuário.
  */
 export const toTelemetriaCreateInput = (
   logs: SyncLogDto[],
@@ -63,7 +58,7 @@ export const toTelemetriaCreateInput = (
       nivelBateria: parseBateria(log.nivel_bateria ?? log.nivelBateria ?? log.battery_level ?? log.batteryLevel),
       tipoRede: tipoRede ? String(tipoRede).trim().toUpperCase() : 'UNKNOWN',
       timestamp: parseData(log.timestamp ?? log.created_at),
-      usuarioId: usuarioAutenticado ?? parseUsuarioId(log.usuario_id ?? log.usuarioId),
+      usuarioId: usuarioAutenticado,
     };
   });
 };

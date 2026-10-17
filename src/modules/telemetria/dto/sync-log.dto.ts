@@ -38,8 +38,8 @@ export interface SyncLogDto {
   timestamp?: unknown;
   /** @deprecated nome antigo de `timestamp` */
   created_at?: unknown;
+  /** Ignorado: o dono dos registros vem só do token (o app ainda envia o campo). */
   usuario_id?: unknown;
-  usuarioId?: unknown;
 }
 
 const MSG_LOTE = 'O payload deve ser um array não vazio de logs.';
