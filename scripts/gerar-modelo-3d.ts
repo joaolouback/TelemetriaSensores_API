@@ -47,7 +47,9 @@ for (let i = 0; i < LADOS; i++) {
 // Vértices não compartilhados: cada face tem a própria normal (visual facetado).
 const posicoes: number[] = [];
 const normais: number[] = [];
-for (let [a, b, c] of triangulos) {
+for (const triangulo of triangulos) {
+  const a = triangulo[0];
+  let [, b, c] = triangulo;
   let normal = normalizar(cross(sub(b, a), sub(c, a)));
   const centro: Vec3 = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3];
   // Garante a ordem anti-horária vista de fora (a face aponta para longe do centro).

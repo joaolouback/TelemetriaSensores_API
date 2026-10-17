@@ -11,16 +11,16 @@ import { TelemetriaSensor } from './entities/telemetria-sensor.entity';
 import { SyncLogDto } from './dto/sync-log.dto';
 import { TelemetriaDto } from './dto/telemetria.dto';
 
-const parseReal = (value: any, decimals: number = 6): number | null => {
+const parseReal = (value: unknown, decimals: number = 6): number | null => {
   if (value === null || value === undefined || value === '') return null;
-  const parsed = parseFloat(value);
+  const parsed = parseFloat(String(value));
   if (isNaN(parsed)) return null;
   return Number(parsed.toFixed(decimals));
 };
 
-const parseBateria = (value: any): number | null => {
+const parseBateria = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null;
-  const parsed = parseFloat(value);
+  const parsed = parseFloat(String(value));
   if (isNaN(parsed)) return null;
   // Se for valor entre 0 e 1 (ex: 0.85 do expo-battery), converte para porcentagem 0-100
   if (parsed <= 1.0 && parsed >= 0.0) {
@@ -29,9 +29,10 @@ const parseBateria = (value: any): number | null => {
   return Math.min(100, Math.max(0, Math.round(parsed)));
 };
 
-const parseData = (value: any): Date => {
-  if (value && !isNaN(new Date(value).getTime())) return new Date(value);
-  return new Date();
+const parseData = (value: unknown): Date => {
+  if (!value || (typeof value !== 'string' && typeof value !== 'number')) return new Date();
+  const data = new Date(value);
+  return isNaN(data.getTime()) ? new Date() : data;
 };
 
 /**

@@ -74,6 +74,32 @@ Documentação interativa em `http://localhost:3000/api-docs`.
 | `npm run modelos:gerar` | Regera o modelo 3D padrão (`public/modelos/cristal.glb`) |
 | `npm run db:studio` | Abre o Prisma Studio (navegador do banco) |
 | `npm run db:reset` | Apaga e recria o banco do zero |
+| `npm test` | Testes de integração (precisa do Docker no ar — veja abaixo) |
+| `npm run lint` | ESLint (regras recomendadas de JS e TypeScript) |
+| `npm run typecheck` | TypeScript sem gerar arquivos (código **e** testes) |
+
+## Testes e qualidade
+
+```bash
+npm run db:up   # o Postgres do projeto precisa estar no ar
+npm test
+```
+
+Os testes ficam em `tests/`, um arquivo por módulo (auth, pontos, check-in, telemetria
+REST/WebSocket, desafio) mais a infraestrutura (`/health`, 404, JSON inválido). São
+**testes de integração**: requisições HTTP reais (Supertest) contra um PostgreSQL de
+verdade, cobrindo também concorrência (toque duplo, os dois jogadores completando o
+desafio ao mesmo tempo), privacidade, anti-trapaça e limites de tentativas.
+
+Eles usam um banco **separado**, `uvvgo_test`, criado no mesmo Postgres e recriado do zero
+(migrations + seed) a cada execução — o banco de desenvolvimento nunca é tocado. Para usar
+outro servidor, defina `TEST_DATABASE_URL`.
+
+**CI:** a cada push e PR, o GitHub Actions (`.github/workflows/ci.yml`) sobe um Postgres e
+roda lint, typecheck, testes e build.
+
+`GET /health` responde `{ "status": "ok", "banco": "ok" }` (ou `503` sem banco) — útil para
+monitoramento e para o serviço de hospedagem. Rotas inexistentes respondem `404` em JSON.
 
 ## Arquitetura
 
