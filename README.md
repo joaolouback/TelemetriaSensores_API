@@ -75,13 +75,54 @@ Documentação interativa em `http://localhost:3000/api-docs`.
 | `npm run db:studio` | Abre o Prisma Studio (navegador do banco) |
 | `npm run db:reset` | Apaga e recria o banco do zero |
 
+## Arquitetura
+
+O código é organizado **por módulo (domínio)**: cada funcionalidade tem sua pasta em
+`src/modules/` com todas as camadas dela. O que é usado por todos fica em `src/shared/`.
+
+```
+src/
+├── modules/
+│   ├── auth/          registro, login e /auth/me
+│   ├── usuario/       entidade, DTO público (sem senhaHash) e acesso aos dados
+│   ├── conquista/     desbloqueio de conquistas pela pontuação
+│   ├── ponto/         pontos de interesse, objetos 3D e cálculo de proximidade
+│   ├── interacao/     check-in (coleta em AR)
+│   └── telemetria/    /sync, /logs e o WebSocket /ws
+├── shared/
+│   ├── database/      Prisma Client (singleton) e o tipo DbClient para transações
+│   ├── errors/        AppError (erro de negócio com status HTTP)
+│   ├── http/          asyncHandler e validar() (DTO com zod)
+│   ├── middlewares/   autenticação JWT e tratamento central de erros
+│   └── utils/         geo (Haversine) e jwt
+├── app.ts             Express: middlewares, rotas dos módulos e errorMiddleware
+├── server.ts          HTTP + WebSocket
+└── swagger.ts         lê as anotações de src/modules/**/*.routes.ts
+```
+
+Dentro de cada módulo:
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `*.routes.ts` | Rotas Express + documentação Swagger |
+| `*.controller.ts` | Lê `req`, valida o DTO, chama o service e responde. Sem regra de negócio nem Prisma |
+| `*.service.ts` | Regras de negócio e acesso ao banco. Erros esperados viram `AppError(status, mensagem)` |
+| `*.mapper.ts` | Converte entidade ⇄ DTO (ex.: `BigInt` → `number`, remover `senhaHash`, payload do app → Prisma) |
+| `dto/` | Formatos de entrada (schemas zod, com as mensagens de erro) e de saída (interfaces) |
+| `entities/` | Tipos do diagrama de classes, derivados dos models do Prisma |
+| `*.gateway.ts` | Entrada via WebSocket (só em `telemetria`) |
+
+Um módulo usa outro **pelo service** (ex.: `interacao` chama `usuarioService.adicionarPontos`
+e `conquistaService.desbloquearPorPontuacao`). Os services que participam de uma transação
+recebem o `tx` como primeiro parâmetro (`DbClient`).
+
 ## Modelo de dados
 
 Implementa o diagrama de classes do TCC (`prisma/schema.prisma`):
 
 | Model | Papel |
 | --- | --- |
-| `Usuario` | Estudantes e administradores (distinguidos por `role`) |
+| `Usuario` / `Administrador` | Estudantes; os administradores têm também um registro em `Administrador` |
 | `PontoDeInteresse` | Os pontos de coleta do campus, com raio de geofence |
 | `Objeto3D` | Modelo 3D renderizado via ARCore ao alcançar o ponto |
 | `Interacao` | Registro de um usuário alcançando um ponto |

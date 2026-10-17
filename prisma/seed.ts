@@ -3,7 +3,7 @@
  *
  * Os 10 pontos de coleta definidos na metodologia do TCC (seção 3.1.1.2).
  */
-import prisma from '../src/database/prisma';
+import prisma from '../src/shared/database/prisma';
 
 /** Centro aproximado do campus da UVV (Boa Vista, Vila Velha/ES). */
 const CAMPUS_UVV = { latitude: -20.3417, longitude: -40.2917 };

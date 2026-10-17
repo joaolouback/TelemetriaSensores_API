@@ -1,0 +1,81 @@
+import { Router } from 'express';
+import { asyncHandler } from '../../shared/http/async-handler';
+import { autenticar } from '../../shared/middlewares/auth.middleware';
+import { registrar, login, perfil } from './auth.controller';
+
+const router = Router();
+
+/**
+ * @swagger
+ * /api/auth/registro:
+ *   post:
+ *     summary: Cria uma conta de usuário
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nome, email, senha]
+ *             properties:
+ *               nome:
+ *                 type: string
+ *                 example: Maria Silva
+ *               email:
+ *                 type: string
+ *                 example: maria@aluno.uvv.br
+ *               senha:
+ *                 type: string
+ *                 example: segredo123
+ *     responses:
+ *       201:
+ *         description: Conta criada. Retorna o token JWT e os dados do usuário.
+ *       400:
+ *         description: Dados inválidos
+ *       409:
+ *         description: E-mail já cadastrado
+ */
+router.post('/auth/registro', asyncHandler(registrar));
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Autentica o usuário
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, senha]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: maria@aluno.uvv.br
+ *               senha:
+ *                 type: string
+ *                 example: segredo123
+ *     responses:
+ *       200:
+ *         description: Login realizado. Retorna o token JWT e os dados do usuário.
+ *       401:
+ *         description: E-mail ou senha incorretos
+ */
+router.post('/auth/login', asyncHandler(login));
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Dados do usuário autenticado
+ *     description: Requer o header `Authorization Bearer <token>`.
+ *     responses:
+ *       200:
+ *         description: Dados do usuário
+ *       401:
+ *         description: Token ausente ou inválido
+ */
+router.get('/auth/me', autenticar, asyncHandler(perfil));
+
+export default router;
