@@ -2,8 +2,8 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import app from './app';
 import dotenv from 'dotenv';
-import prisma from './database/prisma';
-import { setupWebSocket } from './controllers/wsHandler';
+import prisma from './shared/database/prisma';
+import { setupWebSocket } from './modules/telemetria/telemetria.gateway';
 
 dotenv.config();
 

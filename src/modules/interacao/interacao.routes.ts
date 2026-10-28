@@ -1,0 +1,69 @@
+import { Router } from 'express';
+import { asyncHandler } from '../../shared/http/async-handler';
+import { autenticar } from '../../shared/middlewares/auth.middleware';
+import { registrarInteracao, minhasInteracoes } from './interacao.controller';
+
+const router = Router();
+
+/**
+ * @swagger
+ * /api/interacoes:
+ *   post:
+ *     summary: Check-in em um ponto do campus
+ *     description: Chamado quando o jogador toca no objeto 3D em realidade aumentada. O servidor revalida o geofence com a posição enviada; dentro do raio, credita os pontos do ponto (uma única vez por usuário) e desbloqueia as conquistas alcançadas. Requer o header `Authorization Bearer <token>`.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pontoId, latitude, longitude]
+ *             properties:
+ *               pontoId:
+ *                 type: integer
+ *                 example: 1
+ *               latitude:
+ *                 type: number
+ *                 example: -20.34105
+ *               longitude:
+ *                 type: number
+ *                 example: -40.2923
+ *               precisao:
+ *                 type: number
+ *                 description: Precisão do GPS em metros. Acima de 50 m o check-in é recusado (422).
+ *                 example: 8
+ *               mockado:
+ *                 type: boolean
+ *                 description: true se o Android indicar localização simulada (app de GPS falso). Recusado com 422.
+ *                 example: false
+ *     responses:
+ *       201:
+ *         description: Objeto coletado. Retorna os pontos ganhos, a nova pontuação total e as conquistas desbloqueadas.
+ *       400:
+ *         description: Dados inválidos
+ *       401:
+ *         description: Token ausente ou inválido
+ *       404:
+ *         description: Ponto não encontrado
+ *       409:
+ *         description: O usuário já coletou este ponto
+ *       422:
+ *         description: Fora do raio de geofence (a tentativa fica registrada com validadoGeofence = false), GPS falso ou precisão acima de 50 m
+ */
+router.post('/interacoes', autenticar, asyncHandler(registrarInteracao));
+
+/**
+ * @swagger
+ * /api/interacoes/minhas:
+ *   get:
+ *     summary: Pontos já coletados pelo usuário
+ *     description: Requer o header `Authorization Bearer <token>`.
+ *     responses:
+ *       200:
+ *         description: "`{ pontosColetados: number[], pontuacaoTotal: number }`"
+ *       401:
+ *         description: Token ausente ou inválido
+ */
+router.get('/interacoes/minhas', autenticar, asyncHandler(minhasInteracoes));
+
+export default router;

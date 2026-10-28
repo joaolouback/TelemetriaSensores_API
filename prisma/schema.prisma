@@ -24,6 +24,11 @@ model Usuario {
   ranking       Ranking?
   telemetrias   TelemetriaSensor[]
 
+  desafiosCriados   Desafio[]       @relation("DesafioDesafiante")
+  desafiosRecebidos Desafio[]       @relation("DesafioDesafiado")
+  desafiosVencidos  Desafio[]       @relation("DesafioVencedor")
+  coletasDesafio    DesafioColeta[]
+
   @@map("usuario")
 }
 
@@ -35,11 +40,11 @@ model Administrador {
 }
 
 model Conquista {
-  id                Int      @id @default(autoincrement())
-  titulo            String   @db.VarChar(150)
-  descricao         String?  @db.Text
-  iconeUrl          String?  @map("icone_url") @db.VarChar(500)
-  pontosNecessarios Int      @default(0) @map("pontos_necessarios")
+  id                Int     @id @default(autoincrement())
+  titulo            String  @db.VarChar(150)
+  descricao         String? @db.Text
+  iconeUrl          String? @map("icone_url") @db.VarChar(500)
+  pontosNecessarios Int     @default(0) @map("pontos_necessarios")
 
   usuarios UsuarioConquista[]
 
@@ -47,11 +52,11 @@ model Conquista {
 }
 
 model UsuarioConquista {
-  usuarioId       Int      @map("usuario_id")
-  usuario         Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  conquistaId     Int      @map("conquista_id")
+  usuarioId       Int       @map("usuario_id")
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conquistaId     Int       @map("conquista_id")
   conquista       Conquista @relation(fields: [conquistaId], references: [id], onDelete: Cascade)
-  dataDesbloqueio DateTime @default(now()) @map("data_desbloqueio")
+  dataDesbloqueio DateTime  @default(now()) @map("data_desbloqueio")
 
   @@id([usuarioId, conquistaId])
   @@index([conquistaId], map: "idx_uc_conquista")
@@ -88,17 +93,27 @@ model TelemetriaSensor {
 }
 
 model PontoDeInteresse {
-  id               Int      @id @default(autoincrement())
-  nome             String   @db.VarChar(150)
-  descricao        String?  @db.Text
+  id               Int     @id @default(autoincrement())
+  nome             String  @db.VarChar(150)
+  descricao        String? @db.Text
   latitude         Float
   longitude        Float
-  raioGeofence     Float    @default(30) @map("raio_geofence")
-  pontosRecompensa Int      @default(0) @map("pontos_recompensa")
-  ativo            Boolean  @default(true)
+  raioGeofence     Float   @default(30) @map("raio_geofence")
+  pontosRecompensa Int     @default(0) @map("pontos_recompensa")
+  ativo            Boolean @default(true)
+  /**
+   * História ou curiosidade exibida no card do local após a coleta.
+   */
+  curiosidade      String? @db.Text
+  /**
+   * Foto do local (relativa à API, ex.: /imagens/biblioteca.jpg, ou absoluta).
+   */
+  imagemUrl        String? @map("imagem_url") @db.VarChar(500)
 
-  objeto3d   Objeto3D?
-  interacoes Interacao[]
+  objeto3d       Objeto3D?
+  interacoes     Interacao[]
+  desafios       DesafioPonto[]
+  coletasDesafio DesafioColeta[]
 
   @@map("ponto_de_interesse")
 }
@@ -129,4 +144,75 @@ model Interacao {
   @@index([usuarioId, dataHora(sort: Desc)], map: "idx_interacao_usuario")
   @@index([pontoDeInteresseId], map: "idx_interacao_ponto")
   @@map("interacao")
+}
+
+// ─── Desafio 1x1 ─────────────────────────────────────────────────────
+// Um jogador cria o desafio (recebe um código), outro entra com o código.
+// São sorteados pontos do campus; quem coletar todos primeiro vence.
+
+enum StatusDesafio {
+  AGUARDANDO // criado, esperando o oponente entrar com o código
+  EM_ANDAMENTO // os dois estão jogando; o relógio está correndo
+  FINALIZADO // alguém completou, o tempo acabou ou alguém desistiu
+  CANCELADO // o criador cancelou antes de o oponente entrar
+  EXPIRADO // ninguém entrou com o código a tempo
+
+  @@map("status_desafio")
+}
+
+model Desafio {
+  id           Int           @id @default(autoincrement())
+  codigo       String        @unique @db.VarChar(6)
+  status       StatusDesafio @default(AGUARDANDO)
+  desafianteId Int           @map("desafiante_id")
+  desafiante   Usuario       @relation("DesafioDesafiante", fields: [desafianteId], references: [id], onDelete: Cascade)
+  desafiadoId  Int?          @map("desafiado_id")
+  desafiado    Usuario?      @relation("DesafioDesafiado", fields: [desafiadoId], references: [id], onDelete: Cascade)
+  /**
+   * Null em empate ou enquanto não terminou.
+   */
+  vencedorId   Int?          @map("vencedor_id")
+  vencedor     Usuario?      @relation("DesafioVencedor", fields: [vencedorId], references: [id], onDelete: SetNull)
+  criadoEm     DateTime      @default(now()) @map("criado_em")
+  iniciadoEm   DateTime?     @map("iniciado_em")
+  terminaEm    DateTime?     @map("termina_em")
+  finalizadoEm DateTime?     @map("finalizado_em")
+
+  pontos  DesafioPonto[]
+  coletas DesafioColeta[]
+
+  @@index([desafianteId, status], map: "idx_desafio_desafiante")
+  @@index([desafiadoId, status], map: "idx_desafio_desafiado")
+  @@map("desafio")
+}
+
+/**
+ * Pontos sorteados para o desafio.
+ */
+model DesafioPonto {
+  desafioId          Int              @map("desafio_id")
+  desafio            Desafio          @relation(fields: [desafioId], references: [id], onDelete: Cascade)
+  pontoDeInteresseId Int              @map("ponto_de_interesse_id")
+  ponto              PontoDeInteresse @relation(fields: [pontoDeInteresseId], references: [id], onDelete: Cascade)
+  ordem              Int
+
+  @@id([desafioId, pontoDeInteresseId])
+  @@map("desafio_ponto")
+}
+
+/**
+ * Um jogador coletou um dos pontos do desafio (no máximo uma vez por ponto).
+ */
+model DesafioColeta {
+  id                 Int              @id @default(autoincrement())
+  desafioId          Int              @map("desafio_id")
+  desafio            Desafio          @relation(fields: [desafioId], references: [id], onDelete: Cascade)
+  usuarioId          Int              @map("usuario_id")
+  usuario            Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  pontoDeInteresseId Int              @map("ponto_de_interesse_id")
+  ponto              PontoDeInteresse @relation(fields: [pontoDeInteresseId], references: [id], onDelete: Cascade)
+  dataHora           DateTime         @default(now()) @map("data_hora")
+
+  @@unique([desafioId, usuarioId, pontoDeInteresseId], map: "uq_desafio_coleta")
+  @@map("desafio_coleta")
 }
