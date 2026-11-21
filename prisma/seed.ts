@@ -95,6 +95,15 @@ const PONTOS = [
     raioGeofence: 25,
     pontosRecompensa: 20,
   },
+  // Ponto de TESTE fora do campus (Rua Virginópolis, Divino Espírito Santo). Remova antes da entrega.
+  {
+    nome: 'Teste — Rua Virginópolis',
+    descricao: 'Ponto de teste da coleta em realidade aumentada.',
+    latitude: -20.35002,
+    longitude: -40.30046,
+    raioGeofence: 60,
+    pontosRecompensa: 10,
+  },
 ];
 
 /**

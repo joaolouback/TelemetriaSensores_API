@@ -4,6 +4,7 @@
 import prisma, { DbClient } from '../../shared/database/prisma';
 import { AppError } from '../../shared/errors/app-error';
 import { Usuario } from './entities/usuario.entity';
+import { apagarFoto, detectarFormato, salvarFoto } from '../../shared/utils/foto-perfil';
 
 export const buscarPorEmail = (email: string): Promise<Usuario | null> =>
   prisma.usuario.findUnique({ where: { email } });
@@ -36,4 +37,23 @@ export const adicionarPontos = (db: DbClient, id: number, pontos: number): Promi
  */
 export async function travar(tx: DbClient, id: number): Promise<void> {
   await tx.$queryRaw`SELECT id FROM usuario WHERE id = ${id} FOR UPDATE`;
+}
+
+/** Valida e grava a foto de perfil, apagando a anterior. */
+export async function definirFoto(id: number, dados: Buffer): Promise<Usuario> {
+  const formato = detectarFormato(dados);
+  if (!formato) throw new AppError(400, 'Arquivo inválido. Envie uma imagem JPEG, PNG ou WebP.');
+
+  const atual = await obterPorId(id);
+  const fotoUrl = await salvarFoto(id, dados, formato);
+  const usuario = await prisma.usuario.update({ where: { id }, data: { fotoUrl } });
+  await apagarFoto(atual.fotoUrl);
+  return usuario;
+}
+
+export async function removerFoto(id: number): Promise<Usuario> {
+  const atual = await obterPorId(id);
+  const usuario = await prisma.usuario.update({ where: { id }, data: { fotoUrl: null } });
+  await apagarFoto(atual.fotoUrl);
+  return usuario;
 }

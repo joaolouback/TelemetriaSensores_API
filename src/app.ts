@@ -8,6 +8,10 @@ import pontoRoutes from './modules/ponto/ponto.routes';
 import interacaoRoutes from './modules/interacao/interacao.routes';
 import telemetriaRoutes from './modules/telemetria/telemetria.routes';
 import desafioRoutes from './modules/desafio/desafio.routes';
+import rankingRoutes from './modules/ranking/ranking.routes';
+import jogadorRoutes from './modules/jogador/jogador.routes';
+import usuarioRoutes from './modules/usuario/usuario.routes';
+import conquistaRoutes from './modules/conquista/conquista.routes';
 import { errorMiddleware } from './shared/middlewares/error.middleware';
 import { asyncHandler } from './shared/http/async-handler';
 import prisma from './shared/database/prisma';
@@ -25,6 +29,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Modelos 3D (.glb) exibidos em realidade aumentada — `assetUrl` do Objeto3D aponta para cá.
 app.use('/modelos', express.static(path.join(__dirname, '..', 'public', 'modelos')));
 // Fotos dos locais exibidas no card após a coleta — `imagemUrl` do ponto aponta para cá.
+// Fotos de perfil enviadas pelos jogadores.
+app.use('/avatares', express.static(path.join(__dirname, '..', 'public', 'avatares')));
 app.use('/imagens', express.static(path.join(__dirname, '..', 'public', 'imagens')));
 
 /**
@@ -58,6 +64,10 @@ app.use('/api', pontoRoutes);
 app.use('/api', authRoutes);
 app.use('/api', interacaoRoutes);
 app.use('/api', desafioRoutes);
+app.use('/api', rankingRoutes);
+app.use('/api', conquistaRoutes);
+app.use('/api', usuarioRoutes);
+app.use('/api', jogadorRoutes);
 
 // Rota inexistente: responde em JSON, como o resto da API (o padrão do Express é uma página HTML).
 app.use((req, res) => {

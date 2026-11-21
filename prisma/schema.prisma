@@ -16,6 +16,8 @@ model Usuario {
   email          String   @unique @db.VarChar(255)
   senhaHash      String?  @map("senha_hash") @db.VarChar(255)
   pontuacaoTotal Int      @default(0) @map("pontuacao_total")
+  /** Foto de perfil: caminho relativo ao servidor (ex.: `/avatares/3-1730000000000.jpg`). */
+  fotoUrl        String?  @map("foto_url") @db.VarChar(500)
   dataCadastro   DateTime @default(now()) @map("data_cadastro")
 
   administrador Administrador?

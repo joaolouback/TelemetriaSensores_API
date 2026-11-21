@@ -6,5 +6,6 @@ export const toUsuarioPublicoDto = (usuario: Usuario): UsuarioPublicoDto => ({
   nome: usuario.nome,
   email: usuario.email,
   pontuacaoTotal: usuario.pontuacaoTotal,
+  fotoUrl: usuario.fotoUrl,
   dataCadastro: usuario.dataCadastro,
 });

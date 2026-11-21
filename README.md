@@ -6,6 +6,32 @@ geolocalização e realidade aumentada para exploração do campus da Universida
 Atende os pontos de interesse do campus, a validação de geofencing e a telemetria de
 sensores herdada da Prova de Conceito (offline-first).
 
+## Sobre o projeto
+
+O **UVV Go** é um **Trabalho de Conclusão de Curso (TCC)** de Ciência da Computação da
+Universidade Vila Velha (UVV).
+
+**Como começou:** como um estudo de coleta de dados de sensores em celulares Android — um
+app de telemetria *offline-first* (GPS, acelerômetro, bateria, rede) que sincronizava os
+registros com este servidor.
+
+**Onde está hoje:** a telemetria virou a base de uma plataforma gamificada de exploração do
+campus. Este backend atende o app com:
+- **pontos de interesse** do campus e validação de **geofencing** (Haversine);
+- **check-in** da coleta em realidade aumentada, com pontuação única por ponto e anti-trapaça
+  (GPS falso e precisão do sinal);
+- **contas** com JWT, **conquistas**, **ranking** e perfil com foto;
+- **desafio 1x1** (convite por código, corrida pelos pontos sorteados);
+- **telemetria** de sensores via REST e WebSocket, com consentimento (LGPD).
+
+**Objetivo:** incentivar os alunos a conhecer o campus de forma lúdica e avaliar o efeito da
+gamificação com geolocalização e AR no engajamento.
+
+**Próximos passos:** coordenadas reais dos pontos, validação com usuários, hospedagem da API
+e, possivelmente, publicação do app na Google Play Store.
+
+O app Android está em outro repositório: [TelemetriaSensores](https://github.com/joaolouback/TelemetriaSensores).
+
 ## Tecnologias
 - **Node.js + Express** (servidor HTTP)
 - **TypeScript**

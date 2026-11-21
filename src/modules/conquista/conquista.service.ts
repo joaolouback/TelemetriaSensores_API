@@ -1,4 +1,4 @@
-import { DbClient } from '../../shared/database/prisma';
+import prisma, { DbClient } from '../../shared/database/prisma';
 import { Conquista } from './entities/conquista.entity';
 
 /**
@@ -25,4 +25,19 @@ export async function desbloquearPorPontuacao(
   }
 
   return novas;
+}
+
+/** Todas as conquistas do jogo, indicando quais o usuário já desbloqueou. */
+export async function listarDoUsuario(usuarioId: number) {
+  const [conquistas, desbloqueadas] = await Promise.all([
+    prisma.conquista.findMany({ orderBy: { pontosNecessarios: 'asc' } }),
+    prisma.usuarioConquista.findMany({ where: { usuarioId } }),
+  ]);
+  const quando = new Map(desbloqueadas.map((d) => [d.conquistaId, d.dataDesbloqueio]));
+
+  return conquistas.map((c) => ({
+    ...c,
+    desbloqueada: quando.has(c.id),
+    dataDesbloqueio: quando.get(c.id) ?? null,
+  }));
 }

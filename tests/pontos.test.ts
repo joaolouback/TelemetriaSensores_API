@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { api, listarPontos } from './helpers';
 
 describe('pontos de interesse', () => {
-  it('lista os 10 pontos com objeto 3D e campos do card do local', async () => {
+  it('lista os pontos do campus com objeto 3D e campos do card do local', async () => {
     const res = await api().get('/api/pontos');
     expect(res.status).toBe(200);
-    expect(res.body.total).toBe(10);
+    expect(res.body.total).toBeGreaterThanOrEqual(10);
     const [ponto] = res.body.data;
     expect(ponto.objeto3d.assetUrl).toBe('/modelos/cristal.glb');
     expect(ponto).toHaveProperty('curiosidade');
