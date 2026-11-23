@@ -20,6 +20,16 @@ model Usuario {
   fotoUrl        String?  @map("foto_url") @db.VarChar(500)
   dataCadastro   DateTime @default(now()) @map("data_cadastro")
 
+  // ─── Loja de itens ───
+  /** Pontos já gastos na loja. Saldo = pontuacaoTotal - pontosGastos (o ranking segue a pontuação total). */
+  pontosGastos    Int     @default(0) @map("pontos_gastos")
+  /** Código do item equipado em cada categoria (catálogo em src/modules/loja/loja.catalogo.ts). */
+  molduraEquipada String? @map("moldura_equipada") @db.VarChar(40)
+  temaEquipado    String? @map("tema_equipado") @db.VarChar(40)
+  tituloEquipado  String? @map("titulo_equipado") @db.VarChar(40)
+  rastroEquipado  String? @map("rastro_equipado") @db.VarChar(40)
+  itens           UsuarioItem[]
+
   administrador Administrador?
   interacoes    Interacao[]
   conquistas    UsuarioConquista[]
@@ -32,6 +42,19 @@ model Usuario {
   coletasDesafio    DesafioColeta[]
 
   @@map("usuario")
+}
+
+/**
+ * Item da loja comprado pelo jogador (no máximo uma vez cada).
+ */
+model UsuarioItem {
+  usuarioId  Int      @map("usuario_id")
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  itemCodigo String   @map("item_codigo") @db.VarChar(40)
+  dataCompra DateTime @default(now()) @map("data_compra")
+
+  @@id([usuarioId, itemCodigo])
+  @@map("usuario_item")
 }
 
 model Administrador {

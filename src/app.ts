@@ -12,6 +12,7 @@ import rankingRoutes from './modules/ranking/ranking.routes';
 import jogadorRoutes from './modules/jogador/jogador.routes';
 import usuarioRoutes from './modules/usuario/usuario.routes';
 import conquistaRoutes from './modules/conquista/conquista.routes';
+import lojaRoutes from './modules/loja/loja.routes';
 import { errorMiddleware } from './shared/middlewares/error.middleware';
 import { asyncHandler } from './shared/http/async-handler';
 import prisma from './shared/database/prisma';
@@ -68,6 +69,7 @@ app.use('/api', rankingRoutes);
 app.use('/api', conquistaRoutes);
 app.use('/api', usuarioRoutes);
 app.use('/api', jogadorRoutes);
+app.use('/api', lojaRoutes);
 
 // Rota inexistente: responde em JSON, como o resto da API (o padrão do Express é uma página HTML).
 app.use((req, res) => {

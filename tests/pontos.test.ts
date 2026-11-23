@@ -7,7 +7,7 @@ describe('pontos de interesse', () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBeGreaterThanOrEqual(10);
     const [ponto] = res.body.data;
-    expect(ponto.objeto3d.assetUrl).toBe('/modelos/cristal.glb');
+    expect(ponto.objeto3d.assetUrl).toMatch(/^\/modelos\/[\w-]+\.glb$/);
     expect(ponto).toHaveProperty('curiosidade');
     expect(ponto).toHaveProperty('imagemUrl');
   });

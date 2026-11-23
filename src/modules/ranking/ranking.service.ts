@@ -7,6 +7,7 @@
 import prisma from '../../shared/database/prisma';
 import { AppError } from '../../shared/errors/app-error';
 import { RankingDto, RankingItemDto } from './dto/ranking.dto';
+import { aparencia } from '../loja/loja.catalogo';
 
 const LIMITE_PADRAO = 20;
 
@@ -36,12 +37,20 @@ export async function obter(usuarioId: number, limite = LIMITE_PADRAO): Promise<
     prisma.usuario.findMany({
       orderBy: [{ pontuacaoTotal: 'desc' }, { dataCadastro: 'asc' }, { id: 'asc' }],
       take: limite,
-      select: { id: true, nome: true, pontuacaoTotal: true, fotoUrl: true },
+      select: { id: true, nome: true, pontuacaoTotal: true, fotoUrl: true, molduraEquipada: true, tituloEquipado: true },
     }),
     prisma.usuario.count(),
     prisma.usuario.findUnique({
       where: { id: usuarioId },
-      select: { id: true, nome: true, pontuacaoTotal: true, fotoUrl: true, dataCadastro: true },
+      select: {
+        id: true,
+        nome: true,
+        pontuacaoTotal: true,
+        fotoUrl: true,
+        dataCadastro: true,
+        molduraEquipada: true,
+        tituloEquipado: true,
+      },
     }),
   ]);
   if (!eu) throw new AppError(404, 'Usuário não encontrado.');
@@ -54,6 +63,7 @@ export async function obter(usuarioId: number, limite = LIMITE_PADRAO): Promise<
     nome: nomeParaExibicao(u.nome),
     pontuacaoTotal: u.pontuacaoTotal,
     fotoUrl: u.fotoUrl,
+    ...aparencia(u),
   }));
 
   return {
@@ -65,6 +75,7 @@ export async function obter(usuarioId: number, limite = LIMITE_PADRAO): Promise<
       nome: nomeParaExibicao(eu.nome),
       pontuacaoTotal: eu.pontuacaoTotal,
       fotoUrl: eu.fotoUrl,
+      ...aparencia(eu),
     },
   };
 }

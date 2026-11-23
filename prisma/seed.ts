@@ -18,80 +18,81 @@ const PONTOS = [
   {
     nome: 'Prédio Azul',
     descricao: 'Bloco de salas de aula da Unidade de Tecnologia.',
-    latitude: -20.34105,
-    longitude: -40.29230,
+    latitude: -20.354076,
+    longitude: -40.299931,
     raioGeofence: 30,
     pontosRecompensa: 10,
   },
   {
     nome: 'Prédio Rosa',
     descricao: 'Bloco administrativo e de salas de aula.',
-    latitude: -20.34150,
-    longitude: -40.29180,
+    latitude: -20.353341,
+    longitude: -40.298874,
     raioGeofence: 30,
     pontosRecompensa: 10,
   },
   {
     nome: 'Prédio Branco',
     descricao: 'Bloco de laboratórios.',
-    latitude: -20.34200,
-    longitude: -40.29135,
+    latitude: -20.355325,
+    longitude: -40.29916,
     raioGeofence: 30,
     pontosRecompensa: 10,
   },
   {
     nome: 'Biblioteca',
     descricao: 'Biblioteca central do campus.',
-    latitude: -20.34235,
-    longitude: -40.29245,
-    raioGeofence: 25,
+    imagemUrl: '/imagens/biblioteca.jpg',
+    latitude: -20.354402,
+    longitude: -40.299125,
+    raioGeofence: 50,
     pontosRecompensa: 15,
   },
   {
     nome: 'Bandeira do Brasil',
     descricao: 'Mastro da bandeira na praça central.',
-    latitude: -20.34170,
-    longitude: -40.29275,
+    latitude: -20.353889,
+    longitude: -40.299111,
     raioGeofence: 20,
     pontosRecompensa: 15,
   },
   {
     nome: 'Capela UVV',
     descricao: 'Capela do campus universitário.',
-    latitude: -20.34095,
-    longitude: -40.29310,
+    latitude: -20.354384,
+    longitude: -40.298516,
     raioGeofence: 25,
     pontosRecompensa: 15,
   },
   {
     nome: 'Entrada da UVV (Acesso ao Shopping)',
     descricao: 'Portaria de acesso ao shopping vizinho.',
-    latitude: -20.34060,
-    longitude: -40.29155,
+    latitude: -20.352994,
+    longitude: -40.298713,
     raioGeofence: 35,
     pontosRecompensa: 10,
   },
   {
     nome: 'Ginásio Poliesportivo',
     descricao: 'Quadra coberta e área esportiva.',
-    latitude: -20.34290,
-    longitude: -40.29190,
+    latitude: -20.354798,
+    longitude: -40.299492,
     raioGeofence: 40,
     pontosRecompensa: 20,
   },
   {
     nome: 'Cineteatro',
     descricao: 'Cineteatro da universidade.',
-    latitude: -20.34255,
-    longitude: -40.29310,
+    latitude: -20.353722,
+    longitude: -40.300151,
     raioGeofence: 25,
     pontosRecompensa: 20,
   },
   {
     nome: 'Anfiteatro',
     descricao: 'Anfiteatro ao ar livre.',
-    latitude: -20.34130,
-    longitude: -40.29345,
+    latitude: -20.354923,
+    longitude: -40.298633,
     raioGeofence: 25,
     pontosRecompensa: 20,
   },
@@ -108,13 +109,22 @@ const PONTOS = [
 
 /**
  * Modelo 3D de cada ponto. `assetUrl` é relativo à API (servido de `public/modelos/`);
- * o app completa com o endereço do servidor. Gerado por `npm run modelos:gerar`.
+ * o app completa com o endereço do servidor. Os arquivos são gerados por `npm run modelos:gerar`.
+ * Pontos fora desta lista usam o cristal.
  */
-const OBJETO_3D_PADRAO = {
-  assetUrl: '/modelos/cristal.glb',
-  formato: 'GLB',
-  escala: 0.25,
+// Cada ponto tem um anel dourado com a foto do local dentro (scripts/gerar-modelo-3d.ts).
+const ANEL_POR_PONTO: Record<string, string> = {
+  'Prédio Azul': 'predio-azul',
+  'Prédio Rosa': 'predio-rosa',
+  'Prédio Branco': 'predio-branco',
+  Biblioteca: 'biblioteca',
+  'Bandeira do Brasil': 'bandeira',
+  'Capela UVV': 'capela',
+  'Entrada da UVV (Acesso ao Shopping)': 'entrada',
+  'Ginásio Poliesportivo': 'ginasio',
+  Anfiteatro: 'anfiteatro',
 };
+const ANEL_PADRAO = 'cineteatro';
 
 const CONQUISTAS = [
   {
@@ -169,7 +179,13 @@ async function main() {
     }
 
     // Objeto coletado em realidade aumentada ao chegar no ponto.
-    const objeto = { nome: `Cristal — ${ponto.nome}`, ...OBJETO_3D_PADRAO };
+    const slug = ANEL_POR_PONTO[ponto.nome] ?? ANEL_PADRAO;
+    const objeto = {
+      nome: `Anel — ${ponto.nome}`,
+      assetUrl: `/modelos/anel-${slug}.glb`,
+      formato: 'GLB',
+      escala: 0.25,
+    };
     await prisma.objeto3D.upsert({
       where: { pontoDeInteresseId: pontoId },
       update: objeto,

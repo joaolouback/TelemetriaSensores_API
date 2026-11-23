@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { api, criarConta, listarPontos, coletar } from './helpers';
+import prisma from '../src/shared/database/prisma';
 
 describe('ranking e conquistas', () => {
   it('exige login', async () => {
@@ -21,6 +22,15 @@ describe('ranking e conquistas', () => {
 
     const pontos = res.body.jogadores.map((j: { pontuacaoTotal: number }) => j.pontuacaoTotal);
     expect(pontos).toEqual([...pontos].sort((a, b) => b - a));
+  });
+
+  it('desbloqueia as conquistas de pontos ajustados fora do jogo (direto no banco)', async () => {
+    const conta = await criarConta('Ajuste Manual');
+    await prisma.usuario.update({ where: { id: conta.id }, data: { pontuacaoTotal: 200 } });
+
+    const res = await api().get('/api/conquistas').set('Authorization', `Bearer ${conta.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.every((c: { desbloqueada: boolean }) => c.desbloqueada)).toBe(true);
   });
 
   it('lista as conquistas marcando as desbloqueadas', async () => {

@@ -7,11 +7,20 @@ import { AppError } from '../../shared/errors/app-error';
 import * as conquistaService from '../conquista/conquista.service';
 import * as desafioService from '../desafio/desafio.service';
 import { nomeParaExibicao, posicaoDoJogador } from '../ranking/ranking.service';
+import { aparencia } from '../loja/loja.catalogo';
 
 export async function perfilPublico(jogadorId: number, solicitanteId: number) {
   const jogador = await prisma.usuario.findUnique({
     where: { id: jogadorId },
-    select: { id: true, nome: true, fotoUrl: true, pontuacaoTotal: true, dataCadastro: true },
+    select: {
+      id: true,
+      nome: true,
+      fotoUrl: true,
+      pontuacaoTotal: true,
+      dataCadastro: true,
+      molduraEquipada: true,
+      tituloEquipado: true,
+    },
   });
   if (!jogador) throw new AppError(404, 'Jogador não encontrado.');
 
@@ -30,6 +39,7 @@ export async function perfilPublico(jogadorId: number, solicitanteId: number) {
     id: jogador.id,
     nome: nomeParaExibicao(jogador.nome),
     fotoUrl: jogador.fotoUrl,
+    ...aparencia(jogador),
     pontuacaoTotal: jogador.pontuacaoTotal,
     posicao,
     membroDesde: jogador.dataCadastro,

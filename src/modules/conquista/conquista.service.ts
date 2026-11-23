@@ -21,14 +21,25 @@ export async function desbloquearPorPontuacao(
   if (novas.length > 0) {
     await db.usuarioConquista.createMany({
       data: novas.map((c) => ({ usuarioId, conquistaId: c.id })),
+      // Duas requisições ao mesmo tempo podem achar a mesma conquista nova.
+      skipDuplicates: true,
     });
   }
 
   return novas;
 }
 
-/** Todas as conquistas do jogo, indicando quais o usuário já desbloqueou. */
+/**
+ * Todas as conquistas do jogo, indicando quais o usuário já desbloqueou.
+ *
+ * Antes de listar, desbloqueia as que a pontuação atual já alcança: normalmente isso acontece
+ * na coleta ou na vitória de um desafio, mas a pontuação também pode mudar por fora (ajuste
+ * no banco, conquista nova cadastrada com exigência menor do que a de jogadores antigos).
+ */
 export async function listarDoUsuario(usuarioId: number) {
+  const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId }, select: { pontuacaoTotal: true } });
+  if (usuario) await desbloquearPorPontuacao(prisma, usuarioId, usuario.pontuacaoTotal);
+
   const [conquistas, desbloqueadas] = await Promise.all([
     prisma.conquista.findMany({ orderBy: { pontosNecessarios: 'asc' } }),
     prisma.usuarioConquista.findMany({ where: { usuarioId } }),
